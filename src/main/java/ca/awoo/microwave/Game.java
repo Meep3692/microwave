@@ -181,6 +181,7 @@ public class Game extends JComponent{
         if(!states.empty()){
             for(int i = topOpaque.peek(); i < states.size(); i++){
                 State<?> state = states.get(i);
+                state.setSize(getSize());
                 state.paint(g);
             }
         }
