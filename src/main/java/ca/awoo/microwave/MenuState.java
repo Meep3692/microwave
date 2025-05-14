@@ -5,6 +5,9 @@ import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Image;
 import java.util.Optional;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.function.Consumer;
 
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -15,16 +18,20 @@ import javax.swing.SwingConstants;
 public class MenuState extends State<Integer>{
     public static class MenuItem{
         public final String label;
-        public final Runnable run;
-        public MenuItem(String label, Runnable run) {
+        public final Consumer<Game> run;
+        public MenuItem(String label, Consumer<Game> run) {
             this.label = label;
             this.run = run;
         }
     }
+    
     private final Image bg;
     private boolean exit = false;
+    private final Queue<Consumer<Game>> toRun;
+
     public MenuState(Image background, MenuItem... items){
         this.bg = background;
+        toRun = new ConcurrentLinkedQueue<>();
         setLayout(new BorderLayout());
         JPanel menuPanel = new JPanel();
         menuPanel.setLayout(new BoxLayout(menuPanel, BoxLayout.Y_AXIS));
@@ -34,7 +41,7 @@ public class MenuState extends State<Integer>{
         for(MenuItem item : items){
             JButton button = new JButton(item.label);
             button.addActionListener((e) -> {
-                item.run.run();
+                toRun.add(item.run);
             });
             Dimension maxSize = button.getMaximumSize();
             button.setMaximumSize(new Dimension(Integer.MAX_VALUE, (int) maxSize.getHeight()));
@@ -54,11 +61,16 @@ public class MenuState extends State<Integer>{
         add(menuPanel, BorderLayout.WEST);
 
     }
+
     @Override
     public Optional<Integer> update(Game game, double dt) {
         if(exit){
             return Optional.of(0);
         }else{
+            Consumer<Game> run;
+            while((run = toRun.poll()) != null){
+                run.accept(game);
+            }
             return Optional.empty();
         }
     }

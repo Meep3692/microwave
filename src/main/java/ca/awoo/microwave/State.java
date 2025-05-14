@@ -7,4 +7,8 @@ import javax.swing.JComponent;
 public abstract class State<Result> extends JComponent {
     public abstract Optional<Result> update(Game game, double dt);
     public abstract boolean isTransparent();
+
+    public State(){
+        setOpaque(!isTransparent());
+    }
 }

@@ -45,10 +45,10 @@ public class Microwave extends JApplet{
         Thread thread = new Thread(() -> {
             try {
                 game.runState(new MenuState( ImageIO.read(getClass().getResource("/ca/awoo/microwave/menu.png")),
-                    new MenuState.MenuItem("Tests", () -> {System.out.println("pressed");}),
-                    new MenuState.MenuItem("Test 2 for Windows", () -> {System.out.println("pressed");}),
-                    new MenuState.MenuItem("Another", () -> {System.out.println("pressed");}),
-                    new MenuState.MenuItem("Hello", () -> {System.out.println("pressed");})
+                    new MenuState.MenuItem("Breakout", (game) -> {game.runState(new ClearState<>(new Breakout(game)));}),
+                    new MenuState.MenuItem("Test 2 for Windows", (game) -> {System.out.println("pressed");}),
+                    new MenuState.MenuItem("Another", (game) -> {System.out.println("pressed");}),
+                    new MenuState.MenuItem("Hello", (game) -> {System.out.println("pressed");})
                 ));
             } catch (IOException e) {
                 // TODO Auto-generated catch block
