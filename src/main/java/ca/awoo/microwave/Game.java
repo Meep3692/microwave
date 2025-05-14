@@ -21,12 +21,17 @@ public class Game extends JComponent{
     private long targetTime = -1;
     private long nextTime = -1;
 
+    public Game(){
+        setLayout(new GameLayout());
+    }
+
     public <T> T runState(State<T> state){
         double ddelta = 0.016;
         states.push(state);
         if(!state.isTransparent()){
             topOpaque.push(states.size()-1);
         }
+        add(state);
         Optional<T> result;
         while(!(result = state.update(this, ddelta)).isPresent()){
             try {
@@ -76,6 +81,7 @@ public class Game extends JComponent{
         if(!state.isTransparent()){
             topOpaque.pop();
         }
+        remove(state);
         return result.get();
     }
     @Override
@@ -83,9 +89,15 @@ public class Game extends JComponent{
         if(!states.empty()){
             for(int i = topOpaque.peek(); i < states.size(); i++){
                 State<?> state = states.get(i);
-                state.paint(g, getWidth(), getHeight());
+                state.paint(g);
             }
         }
+    }
+    
+
+    @Override
+    public boolean isOptimizedDrawingEnabled() {
+        return false;
     }
 
     public void setTargetFps(double target){

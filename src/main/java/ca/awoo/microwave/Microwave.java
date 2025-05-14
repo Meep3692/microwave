@@ -2,7 +2,9 @@ package ca.awoo.microwave;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;
+import java.io.IOException;
 
+import javax.imageio.ImageIO;
 import javax.swing.BoxLayout;
 import javax.swing.JApplet;
 import javax.swing.JLabel;
@@ -41,7 +43,17 @@ public class Microwave extends JApplet{
     @Override
     public void start() {
         Thread thread = new Thread(() -> {
-            game.runState(new TestState());
+            try {
+                game.runState(new MenuState( ImageIO.read(getClass().getResource("/ca/awoo/microwave/menu.png")),
+                    new MenuState.MenuItem("Tests", () -> {System.out.println("pressed");}),
+                    new MenuState.MenuItem("Test 2 for Windows", () -> {System.out.println("pressed");}),
+                    new MenuState.MenuItem("Another", () -> {System.out.println("pressed");}),
+                    new MenuState.MenuItem("Hello", () -> {System.out.println("pressed");})
+                ));
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
         });
         thread.start();
         game.onSwingFrame((game) -> {
