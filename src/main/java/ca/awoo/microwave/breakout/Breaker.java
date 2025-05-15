@@ -7,7 +7,6 @@ import java.awt.image.BufferedImage;
 import java.util.Optional;
 
 import javax.sound.midi.Sequence;
-
 import ca.awoo.microwave.Game;
 import ca.awoo.microwave.Input;
 import ca.awoo.microwave.State;
@@ -33,6 +32,9 @@ public class Breaker extends State<Integer> {
 
     private Ball ball;
     private Image ballSprite;
+
+    private String hitSound = "/io/itch/brackeys/sound/hurt.wav";
+    private String levelSound = "/io/itch/brackeys/sound/power_up.wav";
 
     private boolean debug = false;
 
@@ -99,6 +101,7 @@ public class Breaker extends State<Integer> {
                 }
             }
             launching = true;
+            game.playSound(levelSound);
         }
         Input input = game.getInput();
         if(input.isHeld(Input.LEFT)){
@@ -122,19 +125,22 @@ public class Breaker extends State<Integer> {
         if(!launching){
             //Collision
             Vec2 ballDest = ball.destPos(dt);
-            if(ballDest.x < 0){
-                ball.pos = new Vec2(0, ball.pos.y);
+            if(ballDest.x < ball.r){
+                ball.pos = new Vec2(ball.r, ball.pos.y);
                 ball.vel = new Vec2(Math.abs(ball.vel.x), ball.vel.y);
+                game.playSound(hitSound);
             }
-            if(ballDest.x > w){
-                ball.pos = new Vec2(w, ball.pos.y);
+            if(ballDest.x > w-ball.r){
+                ball.pos = new Vec2(w-ball.r, ball.pos.y);
                 ball.vel = new Vec2(-Math.abs(ball.vel.x), ball.vel.y);
+                game.playSound(hitSound);
             }
-            if(ballDest.y < 0){
-                ball.pos = new Vec2(ball.pos.x, 0);
+            if(ballDest.y < ball.r){
+                ball.pos = new Vec2(ball.pos.x, ball.r);
                 ball.vel = new Vec2(ball.vel.x, Math.abs(ball.vel.y));
+                game.playSound(hitSound);
             }
-            if(ballDest.y > h){
+            if(ballDest.y > h+ball.r){
                 launching = true;
             }
             Line ballPath = new Line(ball.pos, ball.destPos(dt));
@@ -148,6 +154,7 @@ public class Breaker extends State<Integer> {
                 ball.pos = closest.location;
                 lastHit = closest;
                 closest = null;
+                game.playSound(hitSound);
             }
             int hitBrick = -1;
             for(int i = 0; i < bricks.length; i++){
@@ -167,6 +174,7 @@ public class Breaker extends State<Integer> {
                 lastHit = closest;
                 ball.vel = ball.vel.reflect(closest.normal);
                 ball.pos = closest.location;
+                game.playSound(hitSound);
             }else{
                 ball.pos = ballPath.b;
             }

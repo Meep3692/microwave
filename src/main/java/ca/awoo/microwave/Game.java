@@ -6,9 +6,12 @@ import java.awt.Image;
 import java.awt.KeyboardFocusManager;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -23,6 +26,11 @@ import javax.sound.midi.MidiSystem;
 import javax.sound.midi.MidiUnavailableException;
 import javax.sound.midi.Sequence;
 import javax.sound.midi.Sequencer;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.Clip;
+import javax.sound.sampled.LineUnavailableException;
+import javax.sound.sampled.UnsupportedAudioFileException;
 import javax.swing.JComponent;
 import javax.swing.SwingUtilities;
 
@@ -49,6 +57,14 @@ public class Game extends JComponent{
             sequencer.open();
         } catch (MidiUnavailableException e) {
             System.err.println("No midi sequencer avaliable, midi playback will not work");
+        }
+        for(int i = 0; i < clipPool.length; i++){
+            try {
+                clipPool[i] = AudioSystem.getClip();
+            } catch (LineUnavailableException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
         }
         missingImage = new BufferedImage(16, 16, BufferedImage.TYPE_3BYTE_BGR);
         Graphics missingGraphics = missingImage.getGraphics();
@@ -166,6 +182,54 @@ public class Game extends JComponent{
                 // TODO Auto-generated catch block
                 e.printStackTrace();
             }
+        }
+    }
+
+    private final Clip[] clipPool = new Clip[16];
+    private final Map<String, byte[]> soundCache = new HashMap<>();
+
+    public void playSound(String name){
+        if(!soundCache.containsKey(name)){
+            byte[] bytes = new byte[1024];
+            InputStream is = getClass().getResourceAsStream(name);
+            int bottom = 0;
+            int read = 0;
+            try {
+                while((read = is.read(bytes, bottom, bytes.length-bottom)) > 0){
+                    bottom += read;
+                    if(bottom == bytes.length){
+                        bytes = Arrays.copyOf(bytes, bytes.length + 1024);
+                    }
+                }
+                if(bottom != bytes.length){
+                    bytes = Arrays.copyOf(bytes, bottom);
+                }
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+            soundCache.put(name, bytes);
+        }
+        byte[] sound = soundCache.get(name);
+        Clip clip = null;
+        for(int i = 0; i < clipPool.length; i++){
+            if(!clipPool[i].isActive()){
+                clip = clipPool[i];
+                break;
+            }
+        }
+        if(clip == null){
+            //No line avaliable
+            return;
+        }
+        try {
+            AudioInputStream stream = AudioSystem.getAudioInputStream(new ByteArrayInputStream(sound));
+            clip.close();
+            clip.open(stream);
+            clip.start();
+        } catch (UnsupportedAudioFileException | LineUnavailableException | IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
         }
     }
 
