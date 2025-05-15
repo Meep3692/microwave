@@ -4,7 +4,12 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
+import java.util.Random;
+import java.util.Set;
 
 import javax.sound.midi.Sequence;
 import ca.awoo.microwave.Game;
@@ -30,11 +35,18 @@ public class Breaker extends State<Integer> {
     private int brickMargin = 10;
     private double ballSpeed = 200;
 
-    private Ball ball;
+    private final Set<Ball> balls = new HashSet<>();
     private Image ballSprite;
 
     private String hitSound = "/io/itch/brackeys/sound/hurt.wav";
     private String levelSound = "/io/itch/brackeys/sound/power_up.wav";
+
+    private final List<Powerup> powerups = new ArrayList<>();
+    private final Set<Item> items = new HashSet<>();
+
+    private final Random random = new Random();
+
+    private final Vec2 gravity = new Vec2(0, 100);
 
     private boolean debug = false;
 
@@ -46,7 +58,6 @@ public class Breaker extends State<Integer> {
         bg = game.getImage("/com/screamingbrainstudio/planetSurfaceBg2/Lava_01-640x480.png");
         brick = game.getImage("/com/screamingbrainstudio/breakout/Bricks/Textured/Textured_Brick_01-64x32.png");
         ballSprite = game.getImageMasked("/com/screamingbrainstudio/breakout/Balls/Shiny/Ball_Blue_Shiny-16x16.png", Color.MAGENTA);
-        ball = new Ball(ballSprite.getWidth(null)/2.0);
         brickw = brick.getWidth(null);
         brickh = brick.getHeight(null);
         
@@ -59,6 +70,30 @@ public class Breaker extends State<Integer> {
         g.drawImage(paddle, 0, 0, 29, 28, 35, 0, 63, 28, null);
         g = paddleMiddle.getGraphics();
         g.drawImage(paddle, 0, 0, 6, 28, 29, 0, 34, 28, null);
+
+        Powerup multiball = new Powerup(game.getImageMasked("/ca/awoo/microwave/breaker/multiball.png", Color.MAGENTA), (b) -> {
+            Set<Vec2> newBalls = new HashSet<>();
+            for(Ball ball : balls){
+                newBalls.add(ball.pos);
+            }
+            for(Vec2 pos : newBalls){
+                double vx = random.nextDouble();
+                double vy = vx + random.nextDouble();
+                spawnBall(pos, new Vec2(vx, vy).normalized().times(ballSpeed));
+            }
+        });
+        powerups.add(multiball);
+    }
+
+    public void spawnBall(Vec2 pos, Vec2 vel){
+        Ball ball = new Ball(ballSprite.getWidth(null)/2);
+        ball.pos = pos;
+        ball.vel = vel;
+        balls.add(ball);
+    }
+
+    public Set<Ball> getBalls(){
+        return balls;
     }
 
     private boolean launching = true;
@@ -101,6 +136,8 @@ public class Breaker extends State<Integer> {
                 }
             }
             launching = true;
+            balls.clear();
+            items.clear();
             game.playSound(levelSound);
         }
         Input input = game.getInput();
@@ -118,71 +155,98 @@ public class Breaker extends State<Integer> {
         }
         if(launching && input.isPressed(Input.FIRE)){
             launching = false;
+            double paddleY = h - paddleLeft.getHeight(null);
+            double paddleCenter = paddlePos + paddleWidth/2;
+            Vec2 pos = new Vec2(paddleCenter, paddleY-8);
+            Vec2 vel = new Vec2(0, -ballSpeed);
+            spawnBall(pos, vel);
         }
         if(input.isHeld(Input.EXIT)){
             return Optional.of(0);
         }
         if(!launching){
-            //Collision
-            Vec2 ballDest = ball.destPos(dt);
-            if(ballDest.x < ball.r){
-                ball.pos = new Vec2(ball.r, ball.pos.y);
-                ball.vel = new Vec2(Math.abs(ball.vel.x), ball.vel.y);
-                game.playSound(hitSound);
-            }
-            if(ballDest.x > w-ball.r){
-                ball.pos = new Vec2(w-ball.r, ball.pos.y);
-                ball.vel = new Vec2(-Math.abs(ball.vel.x), ball.vel.y);
-                game.playSound(hitSound);
-            }
-            if(ballDest.y < ball.r){
-                ball.pos = new Vec2(ball.pos.x, ball.r);
-                ball.vel = new Vec2(ball.vel.x, Math.abs(ball.vel.y));
-                game.playSound(hitSound);
-            }
-            if(ballDest.y > h+ball.r){
-                launching = true;
-            }
-            Line ballPath = new Line(ball.pos, ball.destPos(dt));
-            AABB paddle = new AABB(paddlePos, h-paddleLeft.getHeight(null), paddlePos+paddleWidth, h);
-            Hit closest = paddle.castCircle(ballPath, ball.r);
-            if(closest != null){
-                //Paddle behaves weird
-                double offset = closest.location.x - (paddlePos+paddleWidth/2);
-                Vec2 newDir = new Vec2(offset, -paddleWidth/2).normalized();
-                ball.vel = newDir.times(ballSpeed);
-                ball.pos = closest.location;
-                lastHit = closest;
-                closest = null;
-                game.playSound(hitSound);
-            }
-            int hitBrick = -1;
-            for(int i = 0; i < bricks.length; i++){
-                Brick brick = bricks[i];
-                if(brick != null){
-                    Hit hit = brick.collider.castCircle(ballPath, ball.r);
-                    if(hit != null && (closest == null || hit.distance < closest.distance)){
-                        closest = hit;
-                        hitBrick = i;
+            Set<Ball> deadBalls = new HashSet<>();
+            for(Ball ball : balls){
+                //Collision
+                Vec2 ballDest = ball.destPos(dt);
+                if(ballDest.x < ball.r){
+                    ball.pos = new Vec2(ball.r, ball.pos.y);
+                    ball.vel = new Vec2(Math.abs(ball.vel.x), ball.vel.y);
+                    game.playSound(hitSound);
+                }
+                if(ballDest.x > w-ball.r){
+                    ball.pos = new Vec2(w-ball.r, ball.pos.y);
+                    ball.vel = new Vec2(-Math.abs(ball.vel.x), ball.vel.y);
+                    game.playSound(hitSound);
+                }
+                if(ballDest.y < ball.r){
+                    ball.pos = new Vec2(ball.pos.x, ball.r);
+                    ball.vel = new Vec2(ball.vel.x, Math.abs(ball.vel.y));
+                    game.playSound(hitSound);
+                }
+                if(ballDest.y > h+ball.r){
+                    deadBalls.add(ball);
+                }
+                Line ballPath = new Line(ball.pos, ball.destPos(dt));
+                AABB paddle = new AABB(paddlePos, h-paddleLeft.getHeight(null), paddlePos+paddleWidth, h);
+                Hit closest = paddle.castCircle(ballPath, ball.r);
+                if(closest != null){
+                    //Paddle behaves weird
+                    double offset = closest.location.x - (paddlePos+paddleWidth/2);
+                    Vec2 newDir = new Vec2(offset, -paddleWidth/2).normalized();
+                    ball.vel = newDir.times(ballSpeed);
+                    ball.pos = closest.location;
+                    lastHit = closest;
+                    closest = null;
+                    game.playSound(hitSound);
+                }
+                int hitBrick = -1;
+                for(int i = 0; i < bricks.length; i++){
+                    Brick brick = bricks[i];
+                    if(brick != null){
+                        Hit hit = brick.collider.castCircle(ballPath, ball.r);
+                        if(hit != null && (closest == null || hit.distance < closest.distance)){
+                            closest = hit;
+                            hitBrick = i;
+                        }
                     }
                 }
+                if(hitBrick >= 0){
+                    bricks[hitBrick] = null;
+                    if(random.nextInt(10) < 1){
+                        int i = random.nextInt(powerups.size());
+                        Powerup powerup = powerups.get(i);
+                        double brickx = (hitBrick%fieldWidth*brickw)+brickw/2+brickMargin;
+                        double bricky = (hitBrick/fieldWidth*brickh)+brickh/2+brickMargin;
+                        Item item = new Item(powerup, new Vec2(brickx, bricky));
+                        items.add(item);
+                    }
+                }
+                if(closest != null){
+                    lastHit = closest;
+                    ball.vel = ball.vel.reflect(closest.normal);
+                    ball.pos = closest.location;
+                    game.playSound(hitSound);
+                }else{
+                    ball.pos = ballPath.b;
+                }
             }
-            if(hitBrick >= 0){
-                bricks[hitBrick] = null;
+            balls.removeAll(deadBalls);
+            if(balls.isEmpty()){
+                launching = true;
             }
-            if(closest != null){
-                lastHit = closest;
-                ball.vel = ball.vel.reflect(closest.normal);
-                ball.pos = closest.location;
-                game.playSound(hitSound);
-            }else{
-                ball.pos = ballPath.b;
+            Set<Item> deadItems = new HashSet<>();
+            for(Item item : items){
+                item.pos = item.pos.plus(gravity.times(dt));
+                if(item.pos.y > h+28){
+                    deadItems.add(item);
+                }
+                if(item.pos.y > h-28 && item.pos.x > paddlePos && item.pos.x < paddlePos + paddleWidth){
+                    deadItems.add(item);
+                    item.powerup.run.accept(this);
+                }
             }
-        }else{
-            double paddleY = h - paddleLeft.getHeight(null);
-            double paddleCenter = paddlePos + paddleWidth/2;
-            ball.pos = new Vec2(paddleCenter, paddleY-ball.r);
-            ball.vel = new Vec2(0, -ballSpeed);
+            items.removeAll(deadItems);
         }
 
         return Optional.empty();
@@ -206,10 +270,10 @@ public class Breaker extends State<Integer> {
     }
 
     private void drawAABB(AABB aabb, Graphics g){
-        int x = (int) (aabb.min.x - ball.r);
-        int y = (int) (aabb.min.y - ball.r);
-        int w = (int) (aabb.max.x-aabb.min.x+ball.r*2);
-        int h = (int) (aabb.max.y-aabb.min.y+ball.r*2);
+        int x = (int) (aabb.min.x - 8);
+        int y = (int) (aabb.min.y - 8);
+        int w = (int) (aabb.max.x-aabb.min.x+8*2);
+        int h = (int) (aabb.max.y-aabb.min.y+8*2);
         g.drawRect(x, y, w, h);
     }
 
@@ -231,11 +295,21 @@ public class Breaker extends State<Integer> {
                 g.drawImage(b.sprite, b.x(), b.y(), null);
             }
         }
-
-        int ballx = (int) (ball.pos.x - ball.r);
-        int bally = (int) (ball.pos.y - ball.r);
-        g.drawImage(ballSprite, ballx, bally, null);
-
+        for(Ball ball : balls){
+            int ballx = (int) (ball.pos.x - ball.r);
+            int bally = (int) (ball.pos.y - ball.r);
+            g.drawImage(ballSprite, ballx, bally, null);
+        }
+        if(launching){
+            int paddleY = getHeight() - paddleLeft.getHeight(null);
+            int paddleCenter = (int) (paddlePos + paddleWidth/2);
+            g.drawImage(ballSprite, paddleCenter-8, paddleY-16, null);
+        }
+        for(Item item : items){
+            int x = (int) (item.pos.x - item.powerup.sprite.getWidth(null)/2);
+            int y = (int) (item.pos.y - item.powerup.sprite.getHeight(null)/2);
+            g.drawImage(item.powerup.sprite, x, y, null);
+        }
         if(debug && lastHit != null){
             drawHit(lastHit, g);
         }

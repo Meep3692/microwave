@@ -29,6 +29,7 @@ import javax.sound.midi.Sequencer;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.Clip;
+import javax.sound.sampled.LineEvent;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.UnsupportedAudioFileException;
 import javax.swing.JComponent;
@@ -63,7 +64,13 @@ public class Game extends JComponent{
         }
         for(int i = 0; i < clipPool.length; i++){
             try {
-                clipPool[i] = AudioSystem.getClip();
+                Clip clip = AudioSystem.getClip();
+                clipPool[i] = clip;
+                clipPool[i].addLineListener(event -> {
+                    if(event.getType().equals(LineEvent.Type.STOP)){
+                        clip.close();
+                    }
+                });
             } catch (LineUnavailableException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
@@ -217,7 +224,7 @@ public class Game extends JComponent{
         byte[] sound = soundCache.get(name);
         Clip clip = null;
         for(int i = 0; i < clipPool.length; i++){
-            if(!clipPool[i].isActive()){
+            if(!clipPool[i].isOpen()){
                 clip = clipPool[i];
                 break;
             }
@@ -228,7 +235,6 @@ public class Game extends JComponent{
         }
         try {
             AudioInputStream stream = AudioSystem.getAudioInputStream(new ByteArrayInputStream(sound));
-            clip.close();
             clip.open(stream);
             clip.start();
         } catch (UnsupportedAudioFileException | LineUnavailableException | IOException e) {
@@ -342,7 +348,7 @@ public class Game extends JComponent{
             for(Consumer<Game> listener : endListeners){
                 listener.accept(this);
             }
-        });
+        }, "Game");
         thread.start();
     }
 
