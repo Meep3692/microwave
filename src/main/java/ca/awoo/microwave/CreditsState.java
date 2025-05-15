@@ -20,6 +20,7 @@ public class CreditsState extends State<Integer>{
         add(scrollPane, BorderLayout.CENTER);
         // scrollPane.add(creditsPanel);
         creditsPanel.add(new Credit("Textures", "Screaming Brain Studios", "CC0/Public Domain"));
+        creditsPanel.add(new Credit("Music", "Surt R.", "CC BY 4.0"));
         add(new JLabel("Press ESC to exit"), BorderLayout.SOUTH);
     }
 

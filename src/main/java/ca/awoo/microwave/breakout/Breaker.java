@@ -4,7 +4,12 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
+import java.io.IOException;
 import java.util.Optional;
+
+import javax.sound.midi.InvalidMidiDataException;
+import javax.sound.midi.MidiSystem;
+import javax.sound.midi.Sequence;
 
 import ca.awoo.microwave.Game;
 import ca.awoo.microwave.Input;
@@ -35,6 +40,9 @@ public class Breaker extends State<Integer> {
     private boolean debug = false;
 
     public Breaker(Game game){
+        Sequence music = game.getSequence("/io/itch/surtr/dungeon_forest.mid");
+        game.playSequence(music);
+
         Image paddle = game.getImageMasked("/com/screamingbrainstudio/breakout/Paddles/Style B/Paddle_B_Purple_64x28.png", Color.MAGENTA);
         bg = game.getImage("/com/screamingbrainstudio/planetSurfaceBg2/Lava_01-640x480.png");
         brick = game.getImage("/com/screamingbrainstudio/breakout/Bricks/Textured/Textured_Brick_01-64x32.png");

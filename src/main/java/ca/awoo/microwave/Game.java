@@ -9,13 +9,20 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.Stack;
 import java.util.function.Consumer;
 
 import javax.imageio.ImageIO;
+import javax.sound.midi.InvalidMidiDataException;
+import javax.sound.midi.MidiSystem;
+import javax.sound.midi.MidiUnavailableException;
+import javax.sound.midi.Sequence;
+import javax.sound.midi.Sequencer;
 import javax.swing.JComponent;
 import javax.swing.SwingUtilities;
 
@@ -32,8 +39,17 @@ public class Game extends JComponent{
     private boolean[] keys = new boolean[Input.getInputLength()];
     private final Input input = new Input();
 
+    private Sequencer sequencer;
+
     public Game(){
         setLayout(new GameLayout());
+        try {
+            sequencer = MidiSystem.getSequencer();
+            sequencer.setLoopCount(Sequencer.LOOP_CONTINUOUSLY);
+            sequencer.open();
+        } catch (MidiUnavailableException e) {
+            System.err.println("No midi sequencer avaliable, midi playback will not work");
+        }
         missingImage = new BufferedImage(16, 16, BufferedImage.TYPE_3BYTE_BGR);
         Graphics missingGraphics = missingImage.getGraphics();
         missingGraphics.setColor(Color.BLACK);
@@ -74,15 +90,22 @@ public class Game extends JComponent{
     }
 
     private final Image missingImage;
+    private final Map<String, Image> imageCache = new HashMap<>();
 
     public Image getImage(String name){
+        if(imageCache.containsKey(name)){
+            return imageCache.get(name);
+        }
         try {
             URL location = getClass().getResource(name);
             if(location == null){
+                imageCache.put(name, missingImage);
                 return missingImage;
             }
-            return ImageIO.read(location);
+            imageCache.put(name, ImageIO.read(location));
+            return imageCache.get(name);
         } catch (IOException e) {
+            imageCache.put(name, missingImage);
             return missingImage;
         }
     }
@@ -107,6 +130,43 @@ public class Game extends JComponent{
 
     public Input getInput(){
         return input;
+    }
+
+    private final Map<String, Sequence> sequenceCache = new HashMap<>();
+
+    public Sequence getSequence(String name){
+        if(sequenceCache.containsKey(name)){
+            return sequenceCache.get(name);
+        }
+        URL location = getClass().getResource(name);
+        if(location == null){
+            return null;
+        }
+        try {
+            Sequence sequence = MidiSystem.getSequence(location);
+            sequenceCache.put(name, sequence);
+            return sequence;
+        } catch (InvalidMidiDataException | IOException e) {
+            //TODO: handle missing sequences better
+            return null;
+        }
+    }
+
+    public void playSequence(Sequence sequence) {
+        if(sequencer != null){
+            if(sequencer.getSequence() == sequence){
+                return;
+            }
+            
+            try {
+                sequencer.stop();
+                sequencer.setSequence(sequence);
+                sequencer.start();
+            } catch (InvalidMidiDataException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+        }
     }
 
     private void clearPressed(){
