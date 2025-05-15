@@ -10,7 +10,7 @@ import ca.awoo.microwave.Game;
 import ca.awoo.microwave.Input;
 import ca.awoo.microwave.State;
 
-public class Breakout extends State<Integer> {
+public class Breaker extends State<Integer> {
     
     private double paddlePos;
     private double paddleWidth = 128;
@@ -33,7 +33,7 @@ public class Breakout extends State<Integer> {
     private Image ballSprite;
 
 
-    public Breakout(Game game){
+    public Breaker(Game game){
         Image paddle = game.getImageMasked("/com/screamingbrainstudio/breakout/Paddles/Style B/Paddle_B_Purple_64x28.png", Color.MAGENTA);
         bg = game.getImage("/com/screamingbrainstudio/planetSurfaceBg2/Lava_01-640x480.png");
         brick = game.getImage("/com/screamingbrainstudio/breakout/Bricks/Textured/Textured_Brick_01-64x32.png");
