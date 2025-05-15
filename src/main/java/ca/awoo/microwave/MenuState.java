@@ -29,8 +29,8 @@ public class MenuState extends State<Integer>{
     private boolean exit = false;
     private final Queue<Consumer<Game>> toRun;
 
-    public MenuState(Image background, boolean addExit, MenuItem... items){
-        this.bg = background;
+    public MenuState(Game game, String background, boolean addExit, MenuItem... items){
+        this.bg = game.getImage(background);
         toRun = new ConcurrentLinkedQueue<>();
         setLayout(new BorderLayout());
         JPanel menuPanel = new JPanel();

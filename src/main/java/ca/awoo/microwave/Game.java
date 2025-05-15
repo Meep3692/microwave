@@ -267,6 +267,22 @@ public class Game extends JComponent{
             }
         }
     }
+
+    public void start(State<?> state){
+        Thread thread = new Thread(() -> {
+            runState(state);
+            for(Consumer<Game> listener : endListeners){
+                listener.accept(this);
+            }
+        });
+        thread.start();
+    }
+
+    private Set<Consumer<Game>> endListeners = new HashSet<>();
+
+    public void onGameEnd(Consumer<Game> listener){
+        endListeners.add(listener);
+    }
     
 
     @Override
