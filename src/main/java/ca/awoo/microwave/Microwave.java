@@ -46,7 +46,8 @@ public class Microwave extends JApplet{
         Thread thread = new Thread(() -> {
             try {
                 game.runState(new MenuState( ImageIO.read(getClass().getResource("/ca/awoo/microwave/menu.png")), false,
-                    new MenuState.MenuItem("Breaker", (game) -> {game.runState(new Breaker(game));})
+                    new MenuState.MenuItem("Breaker", (game) -> {game.runState(new Breaker(game));}),
+                    new MenuState.MenuItem("Credits", (game) -> {game.runState(new CreditsState());})
                 ));
             } catch (IOException e) {
                 // TODO Auto-generated catch block
