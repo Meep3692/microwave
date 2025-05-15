@@ -68,8 +68,6 @@ public class LineTest {
         Vec2 d = line.b;
         double t = ((a.x-c.x)*(c.y-d.y)-(a.y-c.y)*(c.x-d.x))/((a.x-b.x)*(c.y-d.y)-(a.y-b.y)*(c.x-d.x));
         double u = -((a.x-b.x)*(a.y-c.y)-(a.y-b.y)*(a.x-c.x))/((a.x-b.x)*(c.y-d.y)-(a.y-b.y)*(c.x-d.x));
-        System.out.println("t: " + t);
-        System.out.println("u: " + u);
         assertTrue(t < 0 || t > 1 || u < 0 || u > 1);
     }
 }

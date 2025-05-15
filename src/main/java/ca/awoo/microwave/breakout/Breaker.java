@@ -32,6 +32,7 @@ public class Breaker extends State<Integer> {
     private Ball ball;
     private Image ballSprite;
 
+    private boolean debug = false;
 
     public Breaker(Game game){
         Image paddle = game.getImageMasked("/com/screamingbrainstudio/breakout/Paddles/Style B/Paddle_B_Purple_64x28.png", Color.MAGENTA);
@@ -115,7 +116,6 @@ public class Breaker extends State<Integer> {
         }
         if(!launching){
             //Collision
-            Vec2 oldPos = ball.pos;
             Vec2 ballDest = ball.destPos(dt);
             if(ballDest.x < 0){
                 ball.pos = new Vec2(0, ball.pos.y);
@@ -138,7 +138,6 @@ public class Breaker extends State<Integer> {
             if(closest != null){
                 //Paddle behaves weird
                 double offset = closest.location.x - (paddlePos+paddleWidth/2);
-                System.out.println("Offset: " + offset);
                 Vec2 newDir = new Vec2(offset, -paddleWidth/2).normalized();
                 ball.vel = newDir.times(ballSpeed);
                 ball.pos = closest.location;
@@ -165,10 +164,6 @@ public class Breaker extends State<Integer> {
                 ball.pos = closest.location;
             }else{
                 ball.pos = ballPath.b;
-            }
-            Vec2 newPos = ball.pos;
-            if(oldPos.distance(newPos) > 10){
-                // throw new RuntimeException(closest.toString());
             }
         }else{
             double paddleY = h - paddleLeft.getHeight(null);
@@ -228,7 +223,7 @@ public class Breaker extends State<Integer> {
         int bally = (int) (ball.pos.y - ball.r);
         g.drawImage(ballSprite, ballx, bally, null);
 
-        if(lastHit != null){
+        if(debug && lastHit != null){
             drawHit(lastHit, g);
         }
 

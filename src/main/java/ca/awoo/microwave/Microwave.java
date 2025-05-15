@@ -21,7 +21,6 @@ public class Microwave extends JApplet{
 
     @Override
     public void init() {
-        System.out.println("init pl0x");
         try {
             SwingUtilities.invokeAndWait(() -> {
                 setLayout(new BorderLayout());
@@ -46,11 +45,8 @@ public class Microwave extends JApplet{
     public void start() {
         Thread thread = new Thread(() -> {
             try {
-                game.runState(new MenuState( ImageIO.read(getClass().getResource("/ca/awoo/microwave/menu.png")),
-                    new MenuState.MenuItem("Breaker", (game) -> {game.runState(new Breaker(game));}),
-                    new MenuState.MenuItem("Test 2 for Windows", (game) -> {System.out.println("pressed");}),
-                    new MenuState.MenuItem("Another", (game) -> {System.out.println("pressed");}),
-                    new MenuState.MenuItem("Hello", (game) -> {System.out.println("pressed");})
+                game.runState(new MenuState( ImageIO.read(getClass().getResource("/ca/awoo/microwave/menu.png")), false,
+                    new MenuState.MenuItem("Breaker", (game) -> {game.runState(new Breaker(game));})
                 ));
             } catch (IOException e) {
                 // TODO Auto-generated catch block

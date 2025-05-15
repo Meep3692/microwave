@@ -29,7 +29,7 @@ public class MenuState extends State<Integer>{
     private boolean exit = false;
     private final Queue<Consumer<Game>> toRun;
 
-    public MenuState(Image background, MenuItem... items){
+    public MenuState(Image background, boolean addExit, MenuItem... items){
         this.bg = background;
         toRun = new ConcurrentLinkedQueue<>();
         setLayout(new BorderLayout());
@@ -47,16 +47,19 @@ public class MenuState extends State<Integer>{
             button.setMaximumSize(new Dimension(Integer.MAX_VALUE, (int) maxSize.getHeight()));
             button.setHorizontalAlignment(SwingConstants.LEFT);
             menuPanel.add(button);
-            menuPanel.add(Box.createVerticalStrut(8));
+            if(addExit || item != items[items.length-1])
+                menuPanel.add(Box.createVerticalStrut(8));
         }
-        JButton exitButton = new JButton("Exit");
-        Dimension maxSize = exitButton.getMaximumSize();
-        exitButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, (int) maxSize.getHeight()));
-        exitButton.setHorizontalAlignment(SwingConstants.LEFT);
-        exitButton.addActionListener((e) -> {
-            exit = true;
-        });
-        menuPanel.add(exitButton);
+        if(addExit){
+            JButton exitButton = new JButton("Exit");
+            Dimension maxSize = exitButton.getMaximumSize();
+            exitButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, (int) maxSize.getHeight()));
+            exitButton.setHorizontalAlignment(SwingConstants.LEFT);
+            exitButton.addActionListener((e) -> {
+                exit = true;
+            });
+            menuPanel.add(exitButton);
+        }
         menuPanel.add(Box.createVerticalGlue());
         add(menuPanel, BorderLayout.WEST);
 
