@@ -109,9 +109,11 @@ public class Game extends JComponent{
                     case KeyEvent.VK_SPACE:
                         keys[Input.FIRE] = set;
                         break;
+                    default:
+                        return false;
                 }
             }
-            return false;
+            return true;
         });
     }
 
@@ -134,6 +136,19 @@ public class Game extends JComponent{
             imageCache.put(name, missingImage);
             return missingImage;
         }
+    }
+    
+    public void muteMusic(boolean muted){
+        muteMusic = muted;
+        if(muted){
+            sequencer.stop();
+        }else{
+            sequencer.start();
+        }
+    }
+
+    public void muteSound(boolean muted){
+        muteSound = muted;
     }
 
     public Image getImageMasked(String name, Color mask){
@@ -179,7 +194,7 @@ public class Game extends JComponent{
     }
 
     public void playSequence(Sequence sequence) {
-        if(!muteMusic && sequencer != null){
+        if(sequencer != null){
             if(sequencer.getSequence() == sequence){
                 return;
             }
@@ -187,7 +202,8 @@ public class Game extends JComponent{
             try {
                 sequencer.stop();
                 sequencer.setSequence(sequence);
-                sequencer.start();
+                if(!muteMusic)
+                    sequencer.start();
             } catch (InvalidMidiDataException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
