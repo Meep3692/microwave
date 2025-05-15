@@ -64,6 +64,9 @@ public class Game extends JComponent{
                     case KeyEvent.VK_ESCAPE:
                         keys[Input.EXIT] = set;
                         break;
+                    case KeyEvent.VK_SPACE:
+                        keys[Input.FIRE] = set;
+                        break;
                 }
             }
             return false;
@@ -82,6 +85,24 @@ public class Game extends JComponent{
         } catch (IOException e) {
             return missingImage;
         }
+    }
+
+    public Image getImageMasked(String name, Color mask){
+        int maskPixel = mask.getRGB();
+        Image base = getImage(name);
+        int w = base.getWidth(null);
+        int h = base.getHeight(null);
+        BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_4BYTE_ABGR);
+        img.getGraphics().drawImage(base, 0, 0, null);
+        int[] pixels = img.getRGB(0, 0, w, h, null, 0, w);
+        for(int i = 0; i < pixels.length; i++){
+            int pixel = pixels[i];
+            if(pixel == maskPixel){
+                pixels[i] = 0;
+            }
+        }
+        img.setRGB(0, 0, w, h, pixels, 0, w);
+        return img;
     }
 
     public Input getInput(){

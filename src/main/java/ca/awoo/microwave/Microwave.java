@@ -13,6 +13,8 @@ import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.border.BevelBorder;
 
+import ca.awoo.microwave.breakout.Breakout;
+
 public class Microwave extends JApplet{
     private Game game;
     private JLabel statusLabel;
@@ -45,7 +47,7 @@ public class Microwave extends JApplet{
         Thread thread = new Thread(() -> {
             try {
                 game.runState(new MenuState( ImageIO.read(getClass().getResource("/ca/awoo/microwave/menu.png")),
-                    new MenuState.MenuItem("Breakout", (game) -> {game.runState(new ClearState<>(new Breakout(game)));}),
+                    new MenuState.MenuItem("Breakout", (game) -> {game.runState(new Breakout(game));}),
                     new MenuState.MenuItem("Test 2 for Windows", (game) -> {System.out.println("pressed");}),
                     new MenuState.MenuItem("Another", (game) -> {System.out.println("pressed");}),
                     new MenuState.MenuItem("Hello", (game) -> {System.out.println("pressed");})

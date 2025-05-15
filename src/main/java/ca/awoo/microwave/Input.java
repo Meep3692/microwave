@@ -7,6 +7,7 @@ public class Input {
     public static final int UP = iota++;
     public static final int DOWN = iota++;
     public static final int EXIT = iota++;
+    public static final int FIRE = iota++;
     private final boolean[] held = new boolean[iota];
     private final boolean[] pressed = new boolean[iota];
 
