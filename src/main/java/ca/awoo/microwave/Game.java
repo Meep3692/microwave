@@ -49,6 +49,9 @@ public class Game extends JComponent{
 
     private Sequencer sequencer;
 
+    private boolean muteMusic = false;
+    private boolean muteSound = false;
+
     public Game(){
         setLayout(new GameLayout());
         try {
@@ -169,7 +172,7 @@ public class Game extends JComponent{
     }
 
     public void playSequence(Sequence sequence) {
-        if(sequencer != null){
+        if(!muteMusic && sequencer != null){
             if(sequencer.getSequence() == sequence){
                 return;
             }
@@ -189,6 +192,7 @@ public class Game extends JComponent{
     private final Map<String, byte[]> soundCache = new HashMap<>();
 
     public void playSound(String name){
+        if(muteSound) return;
         if(!soundCache.containsKey(name)){
             byte[] bytes = new byte[1024];
             InputStream is = getClass().getResourceAsStream(name);

@@ -9,6 +9,7 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Consumer;
 
+import javax.sound.midi.Sequence;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
@@ -26,11 +27,14 @@ public class MenuState extends State<Integer>{
     }
     
     private final Image bg;
+    private final Sequence bgm;
     private boolean exit = false;
     private final Queue<Consumer<Game>> toRun;
 
-    public MenuState(Game game, String background, boolean addExit, MenuItem... items){
+    public MenuState(Game game, String background, String bgm, boolean addExit, MenuItem... items){
         this.bg = game.getImage(background);
+        this.bgm = game.getSequence(bgm);
+        game.playSequence(this.bgm);
         toRun = new ConcurrentLinkedQueue<>();
         setLayout(new BorderLayout());
         JPanel menuPanel = new JPanel();
@@ -73,6 +77,8 @@ public class MenuState extends State<Integer>{
             Consumer<Game> run;
             while((run = toRun.poll()) != null){
                 run.accept(game);
+                //In case the menu item ran a state which changed the music
+                game.playSequence(bgm);
             }
             return Optional.empty();
         }
