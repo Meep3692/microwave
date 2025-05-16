@@ -88,8 +88,8 @@ public class Breaker extends State<Integer> {
                 newBalls.add(ball.pos);
             }
             for(Vec2 pos : newBalls){
-                double vx = random.nextDouble();
-                double vy = vx + random.nextDouble();
+                double vx = random.nextDouble()-0.5;
+                double vy = vx + vx * random.nextDouble();
                 spawnBall(pos, new Vec2(vx, vy).normalized().times(ballSpeed));
             }
         });
