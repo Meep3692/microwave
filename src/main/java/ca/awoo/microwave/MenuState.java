@@ -1,7 +1,9 @@
 package ca.awoo.microwave;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Image;
 import java.util.Optional;
@@ -13,6 +15,7 @@ import javax.sound.midi.Sequence;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 
@@ -31,7 +34,7 @@ public class MenuState extends State<Integer>{
     private boolean exit = false;
     private final Queue<Consumer<Game>> toRun;
 
-    public MenuState(Game game, String background, String bgm, boolean addExit, MenuItem... items){
+    public MenuState(Game game,String title, String background, String bgm, boolean addExit, MenuItem... items){
         this.bg = game.getImage(background);
         this.bgm = game.getSequence(bgm);
         game.playSequence(this.bgm);
@@ -66,6 +69,32 @@ public class MenuState extends State<Integer>{
         }
         menuPanel.add(Box.createVerticalGlue());
         add(menuPanel, BorderLayout.WEST);
+
+
+        JPanel titlePanel = new JPanel();
+        titlePanel.setOpaque(false);
+        titlePanel.setDoubleBuffered(false);
+        titlePanel.setLayout(null);
+
+        JLabel titleLabel = new JLabel(title);
+        Font font = titleLabel.getFont();
+        font = font.deriveFont(4.0f*font.getSize2D()).deriveFont(Font.BOLD);
+        titleLabel.setFont(font);
+        titleLabel.setForeground(new Color(153, 153, 204));
+        
+        JLabel titleShadow = new JLabel(title);
+        titleShadow.setFont(font);
+        titleShadow.setForeground(new Color(102, 102, 153));
+        titlePanel.add(titleLabel);
+        titlePanel.add(titleShadow);
+        Dimension labelSize = titleLabel.getPreferredSize();
+        System.out.println(labelSize);
+        titleLabel.setBounds(0, 0, labelSize.width, labelSize.height);
+        titleShadow.setBounds(3, 3, labelSize.width, labelSize.height);
+        add(titlePanel, BorderLayout.NORTH);
+        titlePanel.setMinimumSize(new Dimension(labelSize.width+5, labelSize.height+5));
+        titlePanel.setSize(new Dimension(labelSize.width+5, labelSize.height+5));
+        titlePanel.setPreferredSize(new Dimension(labelSize.width+5, labelSize.height+5));
 
     }
 
