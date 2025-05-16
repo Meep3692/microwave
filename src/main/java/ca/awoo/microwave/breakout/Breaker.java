@@ -1,6 +1,8 @@
 package ca.awoo.microwave.breakout;
 
+import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
@@ -12,6 +14,11 @@ import java.util.Random;
 import java.util.Set;
 
 import javax.sound.midi.Sequence;
+import javax.swing.BoxLayout;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.border.BevelBorder;
+
 import ca.awoo.microwave.Game;
 import ca.awoo.microwave.Input;
 import ca.awoo.microwave.State;
@@ -50,6 +57,10 @@ public class Breaker extends State<Integer> {
 
     private boolean debug = false;
 
+    private int score = 0;
+    private int mult = 1;
+    private JLabel scoreLabel;
+
     public Breaker(Game game){
         Sequence music = game.getSequence("/io/itch/surtr/dungeon_forest.mid");
         game.playSequence(music);
@@ -83,6 +94,17 @@ public class Breaker extends State<Integer> {
             }
         });
         powerups.add(multiball);
+
+        setLayout(new BorderLayout());
+        JPanel topBar = new JPanel();
+        topBar.setBorder(new BevelBorder(BevelBorder.LOWERED));
+        add(topBar, BorderLayout.SOUTH);
+        topBar.setPreferredSize(new Dimension(getWidth(), 16));
+        topBar.setLayout(new BoxLayout(topBar, BoxLayout.X_AXIS));
+        scoreLabel = new JLabel("Score: " + score);
+        add(topBar, BorderLayout.NORTH);
+        topBar.add(scoreLabel);
+        topBar.setDoubleBuffered(false);
     }
 
     public void spawnBall(Vec2 pos, Vec2 vel){
@@ -123,7 +145,7 @@ public class Breaker extends State<Integer> {
             int maxbricks = maxw*maxh;
             bricks = new Brick[maxbricks];
             int bx = brickMargin;
-            int by = brickMargin;
+            int by = brickMargin+16;
             int ix = 0;
             for(int i = 0; i < bricks.length; i++){
                 bricks[i] = new Brick(new AABB(new Vec2(bx, by), new Vec2(bx+brickw, by+brickh)), brick);
@@ -179,8 +201,8 @@ public class Breaker extends State<Integer> {
                     ball.vel = new Vec2(-Math.abs(ball.vel.x), ball.vel.y);
                     game.playSound(hitSound);
                 }
-                if(ballDest.y < ball.r){
-                    ball.pos = new Vec2(ball.pos.x, ball.r);
+                if(ballDest.y < ball.r+16){
+                    ball.pos = new Vec2(ball.pos.x, ball.r+16);
                     ball.vel = new Vec2(ball.vel.x, Math.abs(ball.vel.y));
                     game.playSound(hitSound);
                 }
@@ -199,6 +221,7 @@ public class Breaker extends State<Integer> {
                     lastHit = closest;
                     closest = null;
                     game.playSound(hitSound);
+                    mult = 1;
                 }
                 int hitBrick = -1;
                 for(int i = 0; i < bricks.length; i++){
@@ -217,10 +240,11 @@ public class Breaker extends State<Integer> {
                         int i = random.nextInt(powerups.size());
                         Powerup powerup = powerups.get(i);
                         double brickx = (hitBrick%fieldWidth*brickw)+brickw/2+brickMargin;
-                        double bricky = (hitBrick/fieldWidth*brickh)+brickh/2+brickMargin;
+                        double bricky = (hitBrick/fieldWidth*brickh)+brickh/2+brickMargin+16;
                         Item item = new Item(powerup, new Vec2(brickx, bricky));
                         items.add(item);
                     }
+                    score += mult++;
                 }
                 if(closest != null){
                     lastHit = closest;
@@ -234,6 +258,7 @@ public class Breaker extends State<Integer> {
             balls.removeAll(deadBalls);
             if(balls.isEmpty()){
                 launching = true;
+                mult = 1;
             }
             Set<Item> deadItems = new HashSet<>();
             for(Item item : items){
@@ -313,6 +338,8 @@ public class Breaker extends State<Integer> {
         if(debug && lastHit != null){
             drawHit(lastHit, g);
         }
+
+        scoreLabel.setText("Score: " + score);
 
         super.paint(g);
     }
