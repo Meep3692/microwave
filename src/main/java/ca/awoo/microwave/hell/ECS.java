@@ -120,7 +120,11 @@ public class ECS {
         Component[] current = new Component[iterators.length];
         Object[] components = new Object[iterators.length];
         for(int i = 0; i < iterators.length; i++){
-            current[i] = iterators[i].next();
+            try{
+                current[i] = iterators[i].next();
+            }catch(NoSuchElementException e){
+                return;
+            }
         }
         long lowest = current[0].entity;
         while(true){
@@ -154,7 +158,7 @@ public class ECS {
         }
     }
 
-    public <T> void RemoveComponent(long entity, T component){
+    public <T> void removeComponent(long entity, T component){
         synchronized(shadowRemove){
             Class<?> type = component.getClass();
             shadowRemove.add(new ShadowComp(type, new Component(entity, component)));

@@ -48,6 +48,7 @@ public class PieceSprite {
     private final Variant variant;
     private final Image spriteSheet;
     private final Image spriteSheetDiag;
+    public int layer;
     public PieceSprite(Game game, Type type, Team team, Variant variant) {
         this.type = type;
         this.team = team;

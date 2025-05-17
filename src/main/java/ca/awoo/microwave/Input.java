@@ -8,11 +8,17 @@ public class Input {
     public static final int DOWN = iota++;
     public static final int EXIT = iota++;
     public static final int FIRE = iota++;
+    public static final int SHIFT = iota++;
     private final boolean[] held = new boolean[iota];
     private final boolean[] pressed = new boolean[iota];
+    private final boolean[] released = new boolean[iota];
 
     public boolean isPressed(int input){
         return pressed[input];
+    }
+
+    public boolean isReleased(int input){
+        return released[input];
     }
 
     public boolean isHeld(int input){
@@ -21,6 +27,10 @@ public class Input {
 
     public void setPressed(int input, boolean value){
         pressed[input] = value;
+    }
+
+    public void setReleased(int input, boolean value){
+        released[input] = value;
     }
 
     public void setHeld(int input, boolean value){

@@ -109,6 +109,9 @@ public class Game extends JComponent{
                     case KeyEvent.VK_SPACE:
                         keys[Input.FIRE] = set;
                         break;
+                    case KeyEvent.VK_SHIFT:
+                        keys[Input.SHIFT] = set;
+                        break;
                     default:
                         return false;
                 }
@@ -284,6 +287,7 @@ public class Game extends JComponent{
             synchronized(keys){
                 for(int i = 0; i < Input.getInputLength(); i++){
                     input.setPressed(i, keys[i] && !input.isHeld(i));
+                    input.setReleased(i, !keys[i] && input.isHeld(i));
                     input.setHeld(i, keys[i]);
                 }
             }
