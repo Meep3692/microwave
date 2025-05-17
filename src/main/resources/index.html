@@ -4,12 +4,24 @@
             body {
                 margin: 0;
             }
+            marquee {
+                position: absolute;
+                top: 50%;
+                transform: translateY(-50%);
+            }
         </style>
+        <script src="https://cjrtnc.leaningtech.com/4.0/loader.js"></script>
     </head>
     <body>
         <applet code="ca.awoo.microwave.MicrowaveApplet" width="640" height="480">
-            <h1>Java plugin not supported?</h1>
-            <p>No problem, use <a href="cheerpj.html">cheerpj</a>.</p>
+            <marquee><h1><span id="year">1956</span>, cheerpj is loading...</h1></marquee>
         </applet>
+        <script>
+            document.getElementById("year").innerHTML = (new Date()).getFullYear();
+        </script>
+        <script>
+            cheerpjInit();
+        </script>
+        
     </body>
 </html>
