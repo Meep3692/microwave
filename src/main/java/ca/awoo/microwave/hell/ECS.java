@@ -1,0 +1,173 @@
+package ca.awoo.microwave.hell;
+
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
+import java.util.Map.Entry;
+
+public class ECS {
+    private static class Component implements Comparable<Component>{
+        public final long entity;
+        public final Object component;
+        public Component(long entity, Object component) {
+            this.entity = entity;
+            this.component = component;
+        }
+        @Override
+        public int compareTo(Component o) {
+            return (int) (entity - o.entity);
+        }
+        @Override
+        public int hashCode() {
+            final int prime = 31;
+            int result = 1;
+            result = prime * result + (int) (entity ^ (entity >>> 32));
+            result = prime * result + ((component == null) ? 0 : component.hashCode());
+            return result;
+        }
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (getClass() != obj.getClass())
+                return false;
+            Component other = (Component) obj;
+            if (entity != other.entity)
+                return false;
+            if (component == null) {
+                if (other.component != null)
+                    return false;
+            } else if (!component.equals(other.component))
+                return false;
+            return true;
+        }
+        @Override
+        public String toString() {
+            return "Component [entity=" + entity + ", component=" + component + "]";
+        }
+    }
+
+    private static class ShadowComp {
+        public final Class<?> type;
+        public final Component component;
+        public ShadowComp(Class<?> type, Component component) {
+            this.type = type;
+            this.component = component;
+        }
+        
+    }
+    private final Map<Class<?>, SortedSet<Component>> components;
+    private final Set<ShadowComp> shadow;
+    private final Set<ShadowComp> shadowRemove;
+    private final Set<Long> shadowKill;
+    private long lastEntity = 0;
+
+    public ECS(){
+        this.components = new HashMap<>();
+        this.shadow = new HashSet<>();
+        this.shadowRemove = new HashSet<>();
+        this.shadowKill = new HashSet<>();
+    }
+
+    public void query(System system, Class<?>... comps){
+        synchronized(shadowKill){
+            for(long entity : shadowKill){
+                for(Entry<Class<?>, SortedSet<Component>> entry : components.entrySet()){
+                    entry.getValue().removeIf((c) -> {
+                        return c.entity == entity;
+                    });
+                }
+            }
+            shadowKill.clear();
+        }
+        synchronized(shadow){
+            for(ShadowComp s : shadow){
+                if(!components.containsKey(s.type)){
+                    components.put(s.type, new TreeSet<>());
+                }
+                SortedSet<Component> set = components.get(s.type);
+                set.add(s.component);
+            }
+            shadow.clear();
+        }
+        synchronized(shadowRemove){
+            for(ShadowComp s : shadowRemove){
+                if(!components.containsKey(s.type)){
+                    continue;
+                }
+                SortedSet<Component> set = components.get(s.type);
+                set.remove(s.component);
+            }
+            shadowRemove.clear();
+        }
+        @SuppressWarnings("unchecked")
+        Iterator<Component>[] iterators = new Iterator[comps.length];
+        for(int i = 0; i < comps.length; i++){
+            SortedSet<Component> list = components.get(comps[i]);
+            if(list == null){
+                return;
+            }
+            iterators[i] = list.iterator();
+        }
+        
+        Component[] current = new Component[iterators.length];
+        Object[] components = new Object[iterators.length];
+        for(int i = 0; i < iterators.length; i++){
+            current[i] = iterators[i].next();
+        }
+        long lowest = current[0].entity;
+        while(true){
+            next:
+            for(int i = 0; i < iterators.length; i++){
+                while(current[i].entity < lowest){
+                    try{
+                        current[i] = iterators[i].next();
+                    }catch(NoSuchElementException e){
+                        return;
+                    }
+                    if(current[i] == null){
+                        return;
+                    }
+                }
+                if(current[i].entity > lowest){
+                    lowest = current[i].entity;
+                    break next;
+                }
+                components[i] = current[i].component;
+            }
+            system.run(lowest, components);
+            lowest++;
+        }
+    }
+
+    public <T> void addComponent(long entity, T component){
+        synchronized(shadow){
+            Class<?> type = component.getClass();
+            shadow.add(new ShadowComp(type, new Component(entity, component)));
+        }
+    }
+
+    public <T> void RemoveComponent(long entity, T component){
+        synchronized(shadowRemove){
+            Class<?> type = component.getClass();
+            shadowRemove.add(new ShadowComp(type, new Component(entity, component)));
+        }
+    }
+
+    public long createEntity(){
+        return lastEntity++;
+    }
+
+    public void removeEntity(long entity){
+        synchronized(shadowKill){
+            shadowKill.add(entity);
+        }
+    }
+}
