@@ -2,27 +2,28 @@ package ca.awoo.microwave;
 
 import java.awt.BorderLayout;
 import java.util.Optional;
+import java.util.Set;
 
 import javax.swing.BoxLayout;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 
-public class CreditsState extends State<Integer>{
+public class BindState extends State<Integer>{
 
-    public CreditsState(){
+    public BindState(Game game){
         setLayout(new BorderLayout());
-        JPanel creditsPanel = new JPanel();
-        creditsPanel.setDoubleBuffered(false);
-        creditsPanel.setLayout(new BoxLayout(creditsPanel, BoxLayout.Y_AXIS));
-        JScrollPane scrollPane = new JScrollPane(creditsPanel);
+        JPanel bindPanel = new JPanel();
+        bindPanel.setDoubleBuffered(false);
+        bindPanel.setLayout(new BoxLayout(bindPanel, BoxLayout.Y_AXIS));
+        JScrollPane scrollPane = new JScrollPane(bindPanel);
         scrollPane.setDoubleBuffered(false);
         add(scrollPane, BorderLayout.CENTER);
-        // scrollPane.add(creditsPanel);
-        creditsPanel.add(new Credit("Textures", "Screaming Brain Studios", "CC0/Public Domain"));
-        creditsPanel.add(new Credit("Music", "Surt R.", "CC BY 4.0"));
-        creditsPanel.add(new Credit("Music", "Chisech", "CC0/Public Domain"));
-        creditsPanel.add(new Credit("Sound effects", "Brackeys, Asbjørn Thirslund", "CC0"));
+        for(int i = 0; i < Input.getInputLength(); i++){
+            Set<Integer> bindings = game.getBindings(i);
+            BindControl control = new BindControl(game, i, bindings);
+            bindPanel.add(control);
+        }
         add(new JLabel("Press ESC to exit"), BorderLayout.SOUTH);
     }
 

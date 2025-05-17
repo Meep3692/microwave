@@ -40,4 +40,24 @@ public class Input {
     public static int getInputLength(){
         return iota;
     }
+
+    public static String getName(int input){
+        if(input == LEFT ){
+            return "Left";
+        }else if(input == RIGHT){
+            return "Right";
+        }else if(input == UP){
+            return "Up";
+        }else if(input == DOWN){
+            return "Down";
+        }else if(input == EXIT){
+            return "Exit";
+        }else if(input == FIRE){
+            return "Fire";
+        }else if(input == SHIFT){
+            return "Shift";
+        }else{
+            return "Unknown";
+        }
+    }
 }

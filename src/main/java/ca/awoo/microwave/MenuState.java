@@ -88,7 +88,6 @@ public class MenuState extends State<Integer>{
         titlePanel.add(titleLabel);
         titlePanel.add(titleShadow);
         Dimension labelSize = titleLabel.getPreferredSize();
-        System.out.println(labelSize);
         titleLabel.setBounds(0, 0, labelSize.width, labelSize.height);
         titleShadow.setBounds(3, 3, labelSize.width, labelSize.height);
         add(titlePanel, BorderLayout.NORTH);

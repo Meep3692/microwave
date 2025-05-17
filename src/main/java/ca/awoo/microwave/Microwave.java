@@ -15,6 +15,7 @@ public class Microwave extends Game {
         start(new MenuState( this, "MicrowaveJava", "/com/screamingbrainstudio/planetSurfaceBg2/Rocky_01-640x480.png", "/io/itch/surtr/dungeon_castle.mid", exitButton,
             new MenuState.MenuItem("Breaker", (game) -> {game.runState(new Breaker(game));}),
             new MenuState.MenuItem("Hell", (game) -> {game.runState(new Hell(game));}),
+            new MenuState.MenuItem("Controls", (game) -> {game.runState(new BindState(game));}),
             new MenuState.MenuItem("Credits", (game) -> {game.runState(new CreditsState());})));
     }
 }

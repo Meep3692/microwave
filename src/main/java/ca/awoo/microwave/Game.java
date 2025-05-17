@@ -47,11 +47,31 @@ public class Game extends JComponent{
 
     private boolean[] keys = new boolean[Input.getInputLength()];
     private final Input input = new Input();
+    private boolean hogKeys = true;
 
     private Sequencer sequencer;
 
     private boolean muteMusic = false;
     private boolean muteSound = false;
+    
+    @SuppressWarnings("unchecked")
+    private final Set<Integer>[] bindings = new Set[Input.getInputLength()];
+
+    public void bindInput(int binding, int key){
+        bindings[binding].add(key);
+    }
+
+    public Set<Integer> getBindings(int binding){
+        return bindings[binding];
+    }
+
+    public void clearBinding(int binding){
+        bindings[binding].clear();
+    }
+
+    public void setKeyHog(boolean hog){
+        hogKeys = hog;
+    }
 
     public Game(){
         setLayout(new GameLayout());
@@ -83,40 +103,31 @@ public class Game extends JComponent{
         missingGraphics.fillRect(8, 8, 8, 8);
         missingGraphics.setColor(Color.MAGENTA);
         missingGraphics.fillRect(0, 8, 8, 8);
-        missingGraphics.fillRect(0, 8, 8, 8);
+        missingGraphics.fillRect(8, 0, 8, 8);
+
+        for(int i = 0; i < Input.getInputLength(); i++){
+            bindings[i] = new HashSet<>();
+        }
+        bindings[Input.UP].add(KeyEvent.VK_W);
+        bindings[Input.DOWN].add(KeyEvent.VK_S);
+        bindings[Input.LEFT].add(KeyEvent.VK_A);
+        bindings[Input.RIGHT].add(KeyEvent.VK_D);
+        bindings[Input.EXIT].add(KeyEvent.VK_ESCAPE);
+        bindings[Input.FIRE].add(KeyEvent.VK_SPACE);
+        bindings[Input.SHIFT].add(KeyEvent.VK_SHIFT);
         KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(e -> {
             if(e.getID() != KeyEvent.KEY_PRESSED && e.getID() != KeyEvent.KEY_RELEASED){
                 return false;
             }
             boolean set = e.getID() == KeyEvent.KEY_PRESSED;
             synchronized(keys){
-                switch(e.getKeyCode()){
-                    case KeyEvent.VK_W:
-                        keys[Input.UP] = set;
-                        break;
-                    case KeyEvent.VK_S:
-                        keys[Input.DOWN] = set;
-                        break;
-                    case KeyEvent.VK_A:
-                        keys[Input.LEFT] = set;
-                        break;
-                    case KeyEvent.VK_D:
-                        keys[Input.RIGHT] = set;
-                        break;
-                    case KeyEvent.VK_ESCAPE:
-                        keys[Input.EXIT] = set;
-                        break;
-                    case KeyEvent.VK_SPACE:
-                        keys[Input.FIRE] = set;
-                        break;
-                    case KeyEvent.VK_SHIFT:
-                        keys[Input.SHIFT] = set;
-                        break;
-                    default:
-                        return false;
+                for(int i = 0; i < Input.getInputLength(); i++){
+                    if(bindings[i].contains(e.getKeyCode())){
+                        keys[i] = set;
+                    }
                 }
             }
-            return true;
+            return hogKeys;
         });
     }
 
