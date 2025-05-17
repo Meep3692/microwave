@@ -9,5 +9,10 @@ public class Sprite {
     public Sprite(Image image) {
         this.image = image;
     }
+
+    public Sprite(Image image, int layer) {
+        this.image = image;
+        this.layer = layer;
+    }
     
 }

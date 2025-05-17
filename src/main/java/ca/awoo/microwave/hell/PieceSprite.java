@@ -82,7 +82,7 @@ public class PieceSprite {
         }
     }
 
-    public void draw(Graphics g, Direction dir, int x, int y){
+    public void draw(Graphics g, Direction dir, int x, int y, double scale){
         Image sheet = spriteSheet;
         int dirIndex = 0;
         if(type.dirs == 4){
@@ -149,8 +149,9 @@ public class PieceSprite {
         }
         int sourcex = type.rootX + dirIndex*128;
         int sourcey = type.rootY;
-
-        g.drawImage(sheet, x, y, x+128, y+128, sourcex, sourcey, sourcex+128, sourcey+128, null);
+        int xd2 = (int) (x+128*scale);
+        int yd2 = (int) (y+128*scale);
+        g.drawImage(sheet, x, y, xd2, yd2, sourcex, sourcey, sourcex+128, sourcey+128, null);
     }
 
     public Type getType() {

@@ -10,5 +10,12 @@ public class Transform {
         this.position = position;
     }
 
-    
+    public Transform(Vec2 position, double rotation) {
+        this.position = position;
+        this.rotation = rotation;
+    }
+
+    public Transform copy(){
+        return new Transform(position, rotation);
+    }
 }

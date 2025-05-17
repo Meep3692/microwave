@@ -14,12 +14,13 @@ public class PrioritySet<T> implements Iterable<T>{
         }
         @Override
         public int compareTo(PrioritySet<T>.Priority o) {
-            return priority - o.priority;
+            int diff = priority - o.priority;
+            if(diff == 0) diff = 1;
+            return diff;
         }
         public T getItem() {
             return item;
         }
-        
     }
     private final SortedSet<Priority> set;
     public PrioritySet(){

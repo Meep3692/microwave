@@ -1,5 +1,5 @@
 package ca.awoo.microwave.hell;
 
-public interface System {
+public interface ECSSystem {
     public void run(long entity, Object[] components);
 }

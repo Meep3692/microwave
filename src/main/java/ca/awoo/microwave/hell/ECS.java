@@ -76,7 +76,7 @@ public class ECS {
         this.shadowKill = new HashSet<>();
     }
 
-    public void query(System system, Class<?>... comps){
+    public void query(ECSSystem system, Class<?>... comps){
         synchronized(shadowKill){
             for(long entity : shadowKill){
                 for(Entry<Class<?>, SortedSet<Component>> entry : components.entrySet()){
@@ -119,16 +119,20 @@ public class ECS {
         
         Component[] current = new Component[iterators.length];
         Object[] components = new Object[iterators.length];
+        long lowest = 0;
         for(int i = 0; i < iterators.length; i++){
             try{
                 current[i] = iterators[i].next();
+                if(current[i].entity > lowest){
+                    lowest = current[i].entity;
+                }
             }catch(NoSuchElementException e){
                 return;
             }
         }
-        long lowest = current[0].entity;
+        
         while(true){
-            next:
+            boolean runSystem = true;
             for(int i = 0; i < iterators.length; i++){
                 while(current[i].entity < lowest){
                     try{
@@ -142,12 +146,16 @@ public class ECS {
                 }
                 if(current[i].entity > lowest){
                     lowest = current[i].entity;
-                    break next;
+                    //This used to be a break with label but those just don't work as far as I can tell
+                    runSystem = false;
+                    break;
                 }
                 components[i] = current[i].component;
             }
-            system.run(lowest, components);
-            lowest++;
+            if(runSystem){
+                system.run(lowest, components);
+                lowest++;
+            }
         }
     }
 

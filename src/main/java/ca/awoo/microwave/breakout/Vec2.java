@@ -18,6 +18,10 @@ public class Vec2 {
         return new Vec2(x + other.x, y + other.y);
     }
 
+    public Vec2 plus(double x, double y){
+        return new Vec2(this.x + x, this.y + y);
+    }
+
     public Vec2 minus(Vec2 other){
         return new Vec2(x - other.x, y - other.y);
     }
