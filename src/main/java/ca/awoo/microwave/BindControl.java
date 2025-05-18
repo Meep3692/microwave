@@ -73,25 +73,28 @@ public class BindControl extends JPanel {
         });
         JButton bindButton = new JButton("Bind");
         bindButton.addActionListener((e) -> {
-            JOptionPane option = new JOptionPane(new JLabel("Press a key to bind"), JOptionPane.QUESTION_MESSAGE, JOptionPane.DEFAULT_OPTION, null, new Object[]{"Cancel"}, "Cancel");
+            JOptionPane option = new JOptionPane(new JLabel("Press a key to bind, or press a bound key to unbind it"), JOptionPane.QUESTION_MESSAGE, JOptionPane.DEFAULT_OPTION, null, new Object[]{"Cancel"}, "Cancel");
             JDialog dialog = option.createDialog(this, "Bind a key");
             game.setKeyHog(false);
-            KeyEventDispatcher ked = new KeyEventDispatcher() {
-                @Override
-                public boolean dispatchKeyEvent(KeyEvent ke) {
-                    if(ke.getID() == KeyEvent.KEY_PRESSED){
-                        game.bindInput(input, ke.getKeyCode());
-                        keyLabel.setText(keyNames(game.getBindings(input)));
-                        dialog.dispatchEvent(new WindowEvent(dialog, WindowEvent.WINDOW_CLOSING));
-                        game.setKeyHog(true);
-                        KeyboardFocusManager.getCurrentKeyboardFocusManager().removeKeyEventDispatcher(this);
-                        return true;
+            KeyEventDispatcher ked = ke -> {
+                if(ke.getID() == KeyEvent.KEY_PRESSED){
+                    int key = ke.getKeyCode();
+                    if(game.getBindings(input).contains(key)){
+                        game.unbindInput(input, key);
+                    }else{
+                        game.bindInput(input, key);
                     }
-                    return false;
+                    keyLabel.setText(keyNames(game.getBindings(input)));
+                    dialog.dispatchEvent(new WindowEvent(dialog, WindowEvent.WINDOW_CLOSING));
+                    return true;
                 }
+                return false;
             };
             KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(ked);
             dialog.setVisible(true);
+            option.getValue();
+            KeyboardFocusManager.getCurrentKeyboardFocusManager().removeKeyEventDispatcher(ked);
+            game.setKeyHog(true);
         });
 
         controls.add(clearButton);

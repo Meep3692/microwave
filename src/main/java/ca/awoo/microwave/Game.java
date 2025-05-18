@@ -61,6 +61,10 @@ public class Game extends JComponent{
         bindings[binding].add(key);
     }
 
+    public void unbindInput(int binding, int key){
+        bindings[binding].remove(key);
+    }
+
     public Set<Integer> getBindings(int binding){
         return bindings[binding];
     }
