@@ -2,6 +2,7 @@ package ca.awoo.microwave.hell;
 
 import java.awt.Color;
 import java.awt.Graphics;
+import java.awt.Image;
 import java.util.Optional;
 import ca.awoo.microwave.Game;
 import ca.awoo.microwave.Input;
@@ -23,13 +24,21 @@ public class Hell extends State<Integer>{
     private final ECS ecs;
     private final Sprite dot;
     private double renderScale = 0.5;
+    private double bgScale = 1;
+
+    private double bgx, bgy;
+    private Image bgi;
 
     private Runnable makeEnemy;
+
+    private boolean debug = false;
 
     public Hell(Game game){
         this.ecs = new ECS();
         dot = new Sprite(game.getImageMasked("/com/screamingbrainstudio/breakout/Balls/Glossy/Ball_Red_Glossy-16x16.png", Color.MAGENTA));
         dot.layer = 1;
+
+        bgi = game.getImage("/com/screamingbrainstudio/space/Purple Nebula/Purple_Nebula_01-512x512.png");
         //Create player
         long player = ecs.createEntity();
         ecs.addComponent(player, new Transform(new Vec2(320, 240), -PI/2));
@@ -212,6 +221,8 @@ public class Hell extends State<Integer>{
             }
         }, Transform.class, Shoot.class);
         
+        bgy += 100*dt;
+
         if(game.getInput().isPressed(Input.EXIT)){
             return Optional.of(0);
         }
@@ -225,6 +236,28 @@ public class Hell extends State<Integer>{
     @Override
     public void paint(Graphics g) {
         super.paint(g);
+        int sw = getWidth();
+        int sh = getHeight();
+        int bgx = (int) (this.bgx*bgScale);
+        int bgyr = (int) (this.bgy*bgScale);
+        int basebgw = bgi.getWidth(null);
+        int basebgh = bgi.getHeight(null);
+        int bgw = (int) (basebgw*bgScale);
+        int bgh = (int) (basebgh*bgScale);
+        while(bgx > 0){
+            bgx -= bgw;
+        }
+        while(bgyr > 0){
+            bgyr -= bgh;
+        }
+        while(bgx < sw){
+            int bgy = bgyr;
+            while(bgy < sh){
+                g.drawImage(bgi, bgx, bgy, bgw, bgh, null);
+                bgy += bgh;
+            }
+            bgx += bgw;
+        }
         drawStack.clear();
         ecs.query((e, os) -> {
             Transform t = (Transform) os[0];
@@ -283,58 +316,60 @@ public class Hell extends State<Integer>{
             }
             drawStack.add(() -> {
                 s.draw(g, dir, x, y, renderScale);
-                g.drawString(String.format("TRot: %.2f, Rot: %d, Dir: %s", t.rotation, rot, dir.toString()), x, y);
+                // g.drawString(String.format("TRot: %.2f, Rot: %d, Dir: %s", t.rotation, rot, dir.toString()), x, y);
             }, s.layer);
         }, Transform.class, PieceSprite.class);
         for(Runnable r : drawStack){
             r.run();
         }
-        ecs.query((e, os) -> {
-            Transform t = (Transform) os[0];
-            int x = (int)(t.position.x*renderScale);
-            int y = (int)(t.position.y*renderScale);
-            int dirx = (int) (x + cos(t.rotation)*16);
-            int diry = (int) (y + sin(t.rotation)*16);
-            g.setColor(Color.BLACK);
-            g.drawString("Entity: " + e, x, y);
-            g.setColor(Color.RED);
-            g.drawLine(x, y, dirx, diry);
-        }, Transform.class);
-
-        ecs.query((e, os) -> {
-            Transform t = (Transform)os[0];
-            Homing home = (Homing)os[1];
-            Vec2 delta = home.target.position.minus(t.position);
-            double dir = atan2(delta.y, delta.x);
-            double rot = t.rotation;
-            while(rot < -PI){
-                rot += 2*PI;
-            }
-            while(rot > PI){
-                rot -= 2*PI;
-            }
-            double diff = dir - rot;
-            if(diff > PI) diff -= 2*PI;
-            if(diff < -PI) diff += 2*PI;
-
-            int x = (int)(t.position.x*renderScale);
-            int y = (int)(t.position.y*renderScale);
-            int dirx = (int) (x + cos(dir)*16);
-            int diry = (int) (y + sin(dir)*16);
-
-            int rotx = (int) (x + cos(rot)*16);
-            int roty = (int) (y + sin(rot)*16);
-
-            int diffx = (int) (x + cos(diff*0.5+rot)*16);
-            int diffy = (int) (y + sin(diff*0.5+rot)*16);
-
-            g.setColor(Color.GREEN);
-            g.drawLine(x, y, dirx, diry);
-            g.setColor(Color.RED);
-            g.drawLine(x, y, rotx, roty);
-            g.setColor(Color.BLUE);
-            g.drawLine(x, y, diffx, diffy);
-        }, Transform.class, Homing.class);
+        if(debug){
+            ecs.query((e, os) -> {
+                Transform t = (Transform) os[0];
+                int x = (int)(t.position.x*renderScale);
+                int y = (int)(t.position.y*renderScale);
+                int dirx = (int) (x + cos(t.rotation)*16);
+                int diry = (int) (y + sin(t.rotation)*16);
+                g.setColor(Color.BLACK);
+                g.drawString("Entity: " + e, x, y);
+                g.setColor(Color.RED);
+                g.drawLine(x, y, dirx, diry);
+            }, Transform.class);
+    
+            ecs.query((e, os) -> {
+                Transform t = (Transform)os[0];
+                Homing home = (Homing)os[1];
+                Vec2 delta = home.target.position.minus(t.position);
+                double dir = atan2(delta.y, delta.x);
+                double rot = t.rotation;
+                while(rot < -PI){
+                    rot += 2*PI;
+                }
+                while(rot > PI){
+                    rot -= 2*PI;
+                }
+                double diff = dir - rot;
+                if(diff > PI) diff -= 2*PI;
+                if(diff < -PI) diff += 2*PI;
+    
+                int x = (int)(t.position.x*renderScale);
+                int y = (int)(t.position.y*renderScale);
+                int dirx = (int) (x + cos(dir)*16);
+                int diry = (int) (y + sin(dir)*16);
+    
+                int rotx = (int) (x + cos(rot)*16);
+                int roty = (int) (y + sin(rot)*16);
+    
+                int diffx = (int) (x + cos(diff*0.5+rot)*16);
+                int diffy = (int) (y + sin(diff*0.5+rot)*16);
+    
+                g.setColor(Color.GREEN);
+                g.drawLine(x, y, dirx, diry);
+                g.setColor(Color.RED);
+                g.drawLine(x, y, rotx, roty);
+                g.setColor(Color.BLUE);
+                g.drawLine(x, y, diffx, diffy);
+            }, Transform.class, Homing.class);
+        }
     }
     
 }
