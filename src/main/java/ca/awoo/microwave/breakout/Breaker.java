@@ -14,6 +14,7 @@ import java.util.Random;
 import java.util.Set;
 
 import javax.sound.midi.Sequence;
+import javax.swing.Action;
 import javax.swing.BoxLayout;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -24,7 +25,7 @@ import ca.awoo.microwave.Input;
 import ca.awoo.microwave.State;
 
 public class Breaker extends State<Integer> {
-    
+    private final Game game;
     private double paddlePos;
     private double paddleWidth = 128;
     private double paddleSpeed = 500;
@@ -55,13 +56,12 @@ public class Breaker extends State<Integer> {
 
     private final Vec2 gravity = new Vec2(0, 100);
 
-    private boolean debug = false;
-
     private int score = 0;
     private int mult = 1;
     private JLabel scoreLabel;
 
     public Breaker(Game game){
+        this.game = game;
         Sequence music = game.getSequence("/io/itch/surtr/dungeon_forest.mid");
         game.playSequence(music);
 
@@ -335,12 +335,17 @@ public class Breaker extends State<Integer> {
             int y = (int) (item.pos.y - item.powerup.sprite.getHeight(null)/2);
             g.drawImage(item.powerup.sprite, x, y, null);
         }
-        if(debug && lastHit != null){
+        if(game.isDebugView() && lastHit != null){
             drawHit(lastHit, g);
         }
 
         scoreLabel.setText("Score: " + score);
 
         super.paint(g);
+    }
+
+    @Override
+    public Action[] getActions() {
+        return null;
     }
 }

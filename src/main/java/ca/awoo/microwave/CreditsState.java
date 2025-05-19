@@ -3,6 +3,7 @@ package ca.awoo.microwave;
 import java.awt.BorderLayout;
 import java.util.Optional;
 
+import javax.swing.Action;
 import javax.swing.BoxLayout;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -37,6 +38,11 @@ public class CreditsState extends State<Integer>{
     @Override
     public boolean isTransparent() {
         return false;
+    }
+
+    @Override
+    public Action[] getActions() {
+        return null;
     }
     
 }

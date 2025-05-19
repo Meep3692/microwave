@@ -3,7 +3,12 @@ package ca.awoo.microwave.hell;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Image;
+import java.awt.event.ActionEvent;
 import java.util.Optional;
+
+import javax.swing.AbstractAction;
+import javax.swing.Action;
+
 import ca.awoo.microwave.Game;
 import ca.awoo.microwave.Input;
 import ca.awoo.microwave.Ref;
@@ -21,6 +26,7 @@ import static java.lang.Math.atan2;
 import static java.lang.Math.min;
 
 public class Hell extends State<Integer>{
+    private final Game game;
     private final ECS ecs;
     private final Sprite dot;
     private double renderScale = 0.5;
@@ -31,9 +37,8 @@ public class Hell extends State<Integer>{
 
     private Runnable makeEnemy;
 
-    private boolean debug = false;
-
     public Hell(Game game){
+        this.game = game;
         this.ecs = new ECS();
         dot = new Sprite(game.getImageMasked("/com/screamingbrainstudio/breakout/Balls/Glossy/Ball_Red_Glossy-16x16.png", Color.MAGENTA));
         dot.layer = 1;
@@ -322,7 +327,7 @@ public class Hell extends State<Integer>{
         for(Runnable r : drawStack){
             r.run();
         }
-        if(debug){
+        if(game.isDebugView()){
             ecs.query((e, os) -> {
                 Transform t = (Transform) os[0];
                 int x = (int)(t.position.x*renderScale);
@@ -370,6 +375,31 @@ public class Hell extends State<Integer>{
                 g.drawLine(x, y, diffx, diffy);
             }, Transform.class, Homing.class);
         }
+    }
+
+
+    @Override
+    public Action[] getActions() {
+        return new Action[]{
+            new AbstractAction("Spawn Enemy") {
+                
+                @Override
+                public void actionPerformed(ActionEvent ev) {
+                    long enemy = ecs.createEntity();
+                    ecs.addComponent(enemy, new Transform(new Vec2(320, 50), PI/2));
+                    ecs.addComponent(enemy, new PieceSprite(game, Type.BISHOP, Team.WHITE, Variant.MARBLE));
+                    ecs.addComponent(enemy, MoveTo.loop(200, new Vec2(320, 240), new Vec2(640, 480), new Vec2(960, 240)));
+                    ecs.addComponent(enemy, new Shoot(0.5, (e, t, ecs) -> {
+                        ecs.addComponent(e, t.copy());
+                        ecs.addComponent(e, new Bullet(Bullet.Team.ENEMY));
+                        ecs.addComponent(e, new StraightMovement(300));
+                        ecs.addComponent(e, new Sprite(game.getImageMasked("/com/screamingbrainstudio/breakout/Balls/Shiny/Ball_Orange_Shiny-16x16.png", Color.MAGENTA), 2));
+                    }));
+                    Enemy enComp = new Enemy();
+                    ecs.addComponent(enemy, enComp);
+                }
+            }
+        };
     }
     
 }

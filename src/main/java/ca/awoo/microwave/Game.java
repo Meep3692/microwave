@@ -55,7 +55,17 @@ public class Game extends JComponent{
 
     private boolean muteMusic = false;
     private boolean muteSound = false;
+
+    private boolean debugView = false;
     
+    public boolean isDebugView() {
+        return debugView;
+    }
+
+    public void setDebugView(boolean debugView) {
+        this.debugView = debugView;
+    }
+
     @SuppressWarnings("unchecked")
     private final Set<Integer>[] bindings = new Set[Input.getInputLength()];
 
@@ -290,6 +300,10 @@ public class Game extends JComponent{
         }
     }
 
+    public State<?> getActiveState(){
+        return states.peek();
+    }
+
     public <T> T runState(State<T> state){
         double ddelta = 0.016;
         if(!states.isEmpty()){
@@ -302,6 +316,9 @@ public class Game extends JComponent{
             topOpaque.push(states.size()-1);
         }
         add(state);
+        for(Consumer<Game> listener : stateChangeListeners){
+            listener.accept(this);
+        }
         Optional<T> result;
         clearPressed();
         while(!(result = state.update(this, ddelta)).isPresent()){
@@ -378,15 +395,17 @@ public class Game extends JComponent{
                 state.paint(g);
             }
         }
-        int h = getHeight();
-        int w = getWidth();
-        int start = w-times.length;
-        for(int f = 0; f < times.length; f++){
-            int i = (f + timesIndex) % times.length;
-            int millis = (int) (times[i]/1_000_000);
-            Color color = new Color(max(0, min(16*(millis-16), 255)), max(min(16*(16-millis+16), 255), 0), 0);
-            g.setColor(color);
-            g.drawLine(start+f, h, start+f, h-millis*10);
+        if(debugView){
+            int h = getHeight();
+            int w = getWidth();
+            int start = w-times.length;
+            for(int f = 0; f < times.length; f++){
+                int i = (f + timesIndex) % times.length;
+                int millis = (int) (times[i]/1_000_000);
+                Color color = new Color(max(0, min(16*(millis-16), 255)), max(min(16*(16-millis+16), 255), 0), 0);
+                g.setColor(color);
+                g.drawLine(start+f, h, start+f, h-millis*10);
+            }
         }
     }
 
@@ -421,6 +440,12 @@ public class Game extends JComponent{
 
     public void onSwingFrame(Consumer<Game> listener){
         swingFrameListeners.add(listener);
+    }
+
+    private Set<Consumer<Game>> stateChangeListeners = new HashSet<>();
+
+    public void onStateChange(Consumer<Game> listener){
+        stateChangeListeners.add(listener);
     }
 
     public FPSReport getAvgFps(){

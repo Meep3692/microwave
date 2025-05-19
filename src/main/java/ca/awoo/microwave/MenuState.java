@@ -12,6 +12,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Consumer;
 
 import javax.sound.midi.Sequence;
+import javax.swing.Action;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
@@ -119,6 +120,11 @@ public class MenuState extends State<Integer>{
     public void paint(Graphics g) {
         g.drawImage(bg, 0, 0, getWidth(), getHeight(), null);
         super.paint(g);
+    }
+
+    @Override
+    public Action[] getActions() {
+        return null;
     }
     
 }
