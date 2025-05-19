@@ -61,7 +61,39 @@ public class ECS {
             this.type = type;
             this.component = component;
         }
-        
+        @Override
+        public int hashCode() {
+            final int prime = 31;
+            int result = 1;
+            result = prime * result + ((type == null) ? 0 : type.hashCode());
+            result = prime * result + ((component == null) ? 0 : component.hashCode());
+            return result;
+        }
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (getClass() != obj.getClass())
+                return false;
+            ShadowComp other = (ShadowComp) obj;
+            if (type == null) {
+                if (other.type != null)
+                    return false;
+            } else if (!type.equals(other.type))
+                return false;
+            if (component == null) {
+                if (other.component != null)
+                    return false;
+            } else if (!component.equals(other.component))
+                return false;
+            return true;
+        }
+        @Override
+        public String toString() {
+            return "ShadowComp [type=" + type + ", component=" + component + "]";
+        }
     }
     private final Map<Class<?>, SortedSet<Component>> components;
     private final Set<ShadowComp> shadow;
@@ -87,16 +119,6 @@ public class ECS {
             }
             shadowKill.clear();
         }
-        synchronized(shadow){
-            for(ShadowComp s : shadow){
-                if(!components.containsKey(s.type)){
-                    components.put(s.type, new TreeSet<>());
-                }
-                SortedSet<Component> set = components.get(s.type);
-                set.add(s.component);
-            }
-            shadow.clear();
-        }
         synchronized(shadowRemove){
             for(ShadowComp s : shadowRemove){
                 if(!components.containsKey(s.type)){
@@ -106,6 +128,16 @@ public class ECS {
                 set.remove(s.component);
             }
             shadowRemove.clear();
+        }
+        synchronized(shadow){
+            for(ShadowComp s : shadow){
+                if(!components.containsKey(s.type)){
+                    components.put(s.type, new TreeSet<>());
+                }
+                SortedSet<Component> set = components.get(s.type);
+                set.add(s.component);
+            }
+            shadow.clear();
         }
         @SuppressWarnings("unchecked")
         Iterator<Component>[] iterators = new Iterator[comps.length];
