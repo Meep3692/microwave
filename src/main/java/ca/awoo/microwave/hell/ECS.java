@@ -1,8 +1,10 @@
 package ca.awoo.microwave.hell;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -101,93 +103,119 @@ public class ECS {
     private final Set<Long> shadowKill;
     private long lastEntity = 0;
 
+    private final List<Runnable> eventqueue;
+    private final Map<Object, List<Runnable>> removeListeners;
+
     public ECS(){
         this.components = new HashMap<>();
         this.shadow = new HashSet<>();
         this.shadowRemove = new HashSet<>();
         this.shadowKill = new HashSet<>();
+        removeListeners = new HashMap<>();
+        eventqueue = new ArrayList<>();
     }
 
-    public void query(ECSSystem system, Class<?>... comps){
-        synchronized(shadowKill){
-            for(long entity : shadowKill){
-                for(Entry<Class<?>, SortedSet<Component>> entry : components.entrySet()){
-                    entry.getValue().removeIf((c) -> {
-                        return c.entity == entity;
-                    });
+    private int queryLayers = 0;
+
+    public synchronized void query(ECSSystem system, Class<?>... comps){
+        if(queryLayers == 0){
+            synchronized(shadowKill){
+                for(long entity : shadowKill){
+                    for(Entry<Class<?>, SortedSet<Component>> entry : components.entrySet()){
+                        // entry.getValue().removeIf((c) -> {
+                        //     return c.entity == entity;
+                        // });
+                        entry.getValue().stream().filter((c) -> {return c.entity == entity;}).forEach((c) -> {removeComponent(entity, c.component);});
+                    }
                 }
+                shadowKill.clear();
             }
-            shadowKill.clear();
-        }
-        synchronized(shadowRemove){
-            for(ShadowComp s : shadowRemove){
-                if(!components.containsKey(s.type)){
-                    continue;
+            synchronized(shadowRemove){
+                for(ShadowComp s : shadowRemove){
+                    if(!components.containsKey(s.type)){
+                        continue;
+                    }
+                    SortedSet<Component> set = components.get(s.type);
+                    set.remove(s.component);
+                    List<Runnable> listeners = removeListeners.get(s.component.component);
+                    if(listeners != null){
+                        for(Runnable listener : listeners){
+                            eventqueue.add(listener);
+                        }
+                        removeListeners.remove(s.component.component);
+                    }
                 }
-                SortedSet<Component> set = components.get(s.type);
-                set.remove(s.component);
+                shadowRemove.clear();
             }
-            shadowRemove.clear();
-        }
-        synchronized(shadow){
-            for(ShadowComp s : shadow){
-                if(!components.containsKey(s.type)){
-                    components.put(s.type, new TreeSet<>());
+            synchronized(shadow){
+                for(ShadowComp s : shadow){
+                    if(!components.containsKey(s.type)){
+                        components.put(s.type, new TreeSet<>());
+                    }
+                    SortedSet<Component> set = components.get(s.type);
+                    set.add(s.component);
                 }
-                SortedSet<Component> set = components.get(s.type);
-                set.add(s.component);
+                shadow.clear();
             }
-            shadow.clear();
-        }
-        @SuppressWarnings("unchecked")
-        Iterator<Component>[] iterators = new Iterator[comps.length];
-        for(int i = 0; i < comps.length; i++){
-            SortedSet<Component> list = components.get(comps[i]);
-            if(list == null){
-                return;
+            for(Runnable event : eventqueue){
+                event.run();
             }
-            iterators[i] = list.iterator();
+            eventqueue.clear();
         }
-        
-        Component[] current = new Component[iterators.length];
-        Object[] components = new Object[iterators.length];
-        long lowest = 0;
-        for(int i = 0; i < iterators.length; i++){
-            try{
-                current[i] = iterators[i].next();
-                if(current[i].entity > lowest){
-                    lowest = current[i].entity;
+        queryLayers++;
+        try{
+            @SuppressWarnings("unchecked")
+            Iterator<Component>[] iterators = new Iterator[comps.length];
+            for(int i = 0; i < comps.length; i++){
+                SortedSet<Component> list = components.get(comps[i]);
+                if(list == null){
+                    return;
                 }
-            }catch(NoSuchElementException e){
-                return;
+                iterators[i] = list.iterator();
             }
-        }
-        
-        while(true){
-            boolean runSystem = true;
+            
+            Component[] current = new Component[iterators.length];
+            Object[] components = new Object[iterators.length];
+            long lowest = 0;
             for(int i = 0; i < iterators.length; i++){
-                while(current[i].entity < lowest){
-                    try{
-                        current[i] = iterators[i].next();
-                    }catch(NoSuchElementException e){
-                        return;
+                try{
+                    current[i] = iterators[i].next();
+                    if(current[i].entity > lowest){
+                        lowest = current[i].entity;
                     }
-                    if(current[i] == null){
-                        return;
+                }catch(NoSuchElementException e){
+                    return;
+                }
+            }
+            
+            while(true){
+                boolean runSystem = true;
+                for(int i = 0; i < iterators.length; i++){
+                    while(current[i].entity < lowest){
+                        try{
+                            current[i] = iterators[i].next();
+                        }catch(NoSuchElementException e){
+                            return;
+                        }
+                        if(current[i] == null){
+                            return;
+                        }
                     }
+                    if(current[i].entity > lowest){
+                        lowest = current[i].entity;
+                        //This used to be a break with label but those just don't work as far as I can tell
+                        runSystem = false;
+                        break;
+                    }
+                    components[i] = current[i].component;
                 }
-                if(current[i].entity > lowest){
-                    lowest = current[i].entity;
-                    //This used to be a break with label but those just don't work as far as I can tell
-                    runSystem = false;
-                    break;
+                if(runSystem){
+                    system.run(lowest, components);
+                    lowest++;
                 }
-                components[i] = current[i].component;
             }
-            if(runSystem){
-                system.run(lowest, components);
-                lowest++;
-            }
+        }finally{
+            queryLayers--;
         }
     }
 
@@ -213,5 +241,14 @@ public class ECS {
         synchronized(shadowKill){
             shadowKill.add(entity);
         }
+    }
+
+    public void onRemove(Object component, Runnable listener){
+        List<Runnable> listeners = removeListeners.get(component);
+        if(listeners == null){
+            listeners = new ArrayList<>();
+            removeListeners.put(component, listeners);
+        }
+        listeners.add(listener);
     }
 }

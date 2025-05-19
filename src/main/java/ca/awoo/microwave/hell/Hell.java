@@ -5,6 +5,7 @@ import java.awt.Graphics;
 import java.util.Optional;
 import ca.awoo.microwave.Game;
 import ca.awoo.microwave.Input;
+import ca.awoo.microwave.Ref;
 import ca.awoo.microwave.State;
 import ca.awoo.microwave.breakout.Vec2;
 import ca.awoo.microwave.hell.PieceSprite.Direction;
@@ -15,6 +16,7 @@ import ca.awoo.microwave.hell.PieceSprite.Variant;
 import static java.lang.Math.cos;
 import static java.lang.Math.sin;
 import static java.lang.Math.PI;
+import static java.lang.Math.atan2;
 import static java.lang.Math.min;
 
 public class Hell extends State<Integer>{
@@ -35,7 +37,7 @@ public class Hell extends State<Integer>{
         long enemy = ecs.createEntity();
         ecs.addComponent(enemy, new Transform(new Vec2(320, 50), PI/2));
         ecs.addComponent(enemy, new PieceSprite(game, Type.BISHOP, Team.WHITE, Variant.MARBLE));
-        ecs.addComponent(enemy, new MoveTo(new Vec2(320, 340), 200, new MoveTo(new Vec2(640, 480), 200)));
+        ecs.addComponent(enemy, MoveTo.loop(200, new Vec2(320, 240), new Vec2(640, 480), new Vec2(960, 240)));
         ecs.addComponent(enemy, new Shoot(0.5, (e, t, ecs) -> {
             ecs.addComponent(e, t.copy());
             ecs.addComponent(e, new Bullet(Bullet.Team.ENEMY));
@@ -83,6 +85,20 @@ public class Hell extends State<Integer>{
                 ecs.addComponent(bullet, new Bullet(Bullet.Team.PLAYER));
                 ecs.addComponent(bullet, new StraightMovement(300));
                 ecs.addComponent(bullet, new Sprite(game.getImageMasked("/com/screamingbrainstudio/breakout/Balls/Glass/Ball_Chrome_Glass-16x16.png", Color.MAGENTA), 2));
+                Ref<Transform> enemy = new Ref<>(null);
+                ecs.query((en, eos) -> {
+                    Transform et = (Transform)eos[0];
+                    if(enemy.contents == null || t.position.distance(et.position) < t.position.distance(enemy.contents.position)){
+                        enemy.contents = et;
+                    }
+                }, Transform.class, Enemy.class);
+                if(enemy.contents != null){
+                    Homing homing = new Homing(enemy.contents);
+                    ecs.addComponent(bullet, homing);
+                    ecs.onRemove(enemy.contents, () -> {
+                        ecs.removeComponent(bullet, homing);
+                    });
+                }
             }
             if(input.isPressed(Input.SHIFT)){
                 ecs.addComponent(e, dot);
@@ -93,6 +109,14 @@ public class Hell extends State<Integer>{
             
             t.position = t.position.plus(dx, dy);
         }, Transform.class, PieceSprite.class, Player.class);
+        //Bullet homing
+        ecs.query((e, os) -> {
+            Transform t = (Transform)os[0];
+            Homing home = (Homing)os[1];
+            Vec2 delta = home.target.position.minus(t.position);
+            double dir = atan2(delta.y, delta.x);
+            t.rotation = dir;
+        }, Transform.class, Homing.class);
         //Bullet movement
         ecs.query((e, os) -> {
             Transform t = (Transform) os[0];
@@ -118,6 +142,7 @@ public class Hell extends State<Integer>{
                 Bullet b = (Bullet)bos[1];
                 if(b.team == Bullet.Team.ENEMY && et.position.distance(bt.position) < 16){
                     game.playSound("/io/itch/brackeys/sound/hurt.wav");
+                    ecs.removeEntity(bullet);
                 }
             }, Transform.class, Bullet.class);
         }, Transform.class, Player.class);
@@ -131,6 +156,7 @@ public class Hell extends State<Integer>{
                 if(b.team == Bullet.Team.PLAYER && et.position.distance(bt.position) < 32){
                     game.playSound("/io/itch/brackeys/sound/hurt.wav");
                     ecs.removeEntity(enemy);
+                    ecs.removeEntity(bullet);
                 }
             }, Transform.class, Bullet.class);
         }, Transform.class, Enemy.class);
