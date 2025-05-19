@@ -23,6 +23,9 @@ public class Hell extends State<Integer>{
     private final ECS ecs;
     private final Sprite dot;
     private double renderScale = 0.5;
+
+    private Runnable makeEnemy;
+
     public Hell(Game game){
         this.ecs = new ECS();
         dot = new Sprite(game.getImageMasked("/com/screamingbrainstudio/breakout/Balls/Glossy/Ball_Red_Glossy-16x16.png", Color.MAGENTA));
@@ -34,17 +37,23 @@ public class Hell extends State<Integer>{
         ecs.addComponent(player, new Player());
         game.playSequence(game.getSequence("/io/itch/chisech/naranoiston/B01 - Viagem ao Setor Magenta.mid"));
 
-        long enemy = ecs.createEntity();
-        ecs.addComponent(enemy, new Transform(new Vec2(320, 50), PI/2));
-        ecs.addComponent(enemy, new PieceSprite(game, Type.BISHOP, Team.WHITE, Variant.MARBLE));
-        ecs.addComponent(enemy, MoveTo.loop(200, new Vec2(320, 240), new Vec2(640, 480), new Vec2(960, 240)));
-        ecs.addComponent(enemy, new Shoot(0.5, (e, t, ecs) -> {
-            ecs.addComponent(e, t.copy());
-            ecs.addComponent(e, new Bullet(Bullet.Team.ENEMY));
-            ecs.addComponent(e, new StraightMovement(300));
-            ecs.addComponent(e, new Sprite(game.getImageMasked("/com/screamingbrainstudio/breakout/Balls/Shiny/Ball_Orange_Shiny-16x16.png", Color.MAGENTA), 2));
-        }));
-        ecs.addComponent(enemy, new Enemy());
+        makeEnemy = () -> {
+            long enemy = ecs.createEntity();
+            ecs.addComponent(enemy, new Transform(new Vec2(320, 50), PI/2));
+            ecs.addComponent(enemy, new PieceSprite(game, Type.BISHOP, Team.WHITE, Variant.MARBLE));
+            ecs.addComponent(enemy, MoveTo.loop(200, new Vec2(320, 240), new Vec2(640, 480), new Vec2(960, 240)));
+            ecs.addComponent(enemy, new Shoot(0.5, (e, t, ecs) -> {
+                ecs.addComponent(e, t.copy());
+                ecs.addComponent(e, new Bullet(Bullet.Team.ENEMY));
+                ecs.addComponent(e, new StraightMovement(300));
+                ecs.addComponent(e, new Sprite(game.getImageMasked("/com/screamingbrainstudio/breakout/Balls/Shiny/Ball_Orange_Shiny-16x16.png", Color.MAGENTA), 2));
+            }));
+            Enemy enComp = new Enemy();
+            ecs.addComponent(enemy, enComp);
+            ecs.onRemove(enComp, makeEnemy);
+        };
+        makeEnemy.run();
+        
     }
 
     
@@ -114,8 +123,19 @@ public class Hell extends State<Integer>{
             Transform t = (Transform)os[0];
             Homing home = (Homing)os[1];
             Vec2 delta = home.target.position.minus(t.position);
+            double closeness = 600/delta.magnitude()+1;
             double dir = atan2(delta.y, delta.x);
-            t.rotation = dir;
+            double rot = t.rotation;
+            while(rot < -PI){
+                rot += 2*PI;
+            }
+            while(rot > PI){
+                rot -= 2*PI;
+            }
+            double diff = dir - rot;
+            if(diff > PI) diff -= 2*PI;
+            if(diff < -PI) diff += 2*PI;
+            t.rotation += diff*dt*closeness;
         }, Transform.class, Homing.class);
         //Bullet movement
         ecs.query((e, os) -> {
@@ -271,8 +291,50 @@ public class Hell extends State<Integer>{
         }
         ecs.query((e, os) -> {
             Transform t = (Transform) os[0];
-            g.drawString("Entity: " + e, (int)(t.position.x*renderScale), (int)(t.position.y*renderScale));
+            int x = (int)(t.position.x*renderScale);
+            int y = (int)(t.position.y*renderScale);
+            int dirx = (int) (x + cos(t.rotation)*16);
+            int diry = (int) (y + sin(t.rotation)*16);
+            g.setColor(Color.BLACK);
+            g.drawString("Entity: " + e, x, y);
+            g.setColor(Color.RED);
+            g.drawLine(x, y, dirx, diry);
         }, Transform.class);
+
+        ecs.query((e, os) -> {
+            Transform t = (Transform)os[0];
+            Homing home = (Homing)os[1];
+            Vec2 delta = home.target.position.minus(t.position);
+            double dir = atan2(delta.y, delta.x);
+            double rot = t.rotation;
+            while(rot < -PI){
+                rot += 2*PI;
+            }
+            while(rot > PI){
+                rot -= 2*PI;
+            }
+            double diff = dir - rot;
+            if(diff > PI) diff -= 2*PI;
+            if(diff < -PI) diff += 2*PI;
+
+            int x = (int)(t.position.x*renderScale);
+            int y = (int)(t.position.y*renderScale);
+            int dirx = (int) (x + cos(dir)*16);
+            int diry = (int) (y + sin(dir)*16);
+
+            int rotx = (int) (x + cos(rot)*16);
+            int roty = (int) (y + sin(rot)*16);
+
+            int diffx = (int) (x + cos(diff*0.5+rot)*16);
+            int diffy = (int) (y + sin(diff*0.5+rot)*16);
+
+            g.setColor(Color.GREEN);
+            g.drawLine(x, y, dirx, diry);
+            g.setColor(Color.RED);
+            g.drawLine(x, y, rotx, roty);
+            g.setColor(Color.BLUE);
+            g.drawLine(x, y, diffx, diffy);
+        }, Transform.class, Homing.class);
     }
     
 }

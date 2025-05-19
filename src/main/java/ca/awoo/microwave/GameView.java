@@ -24,7 +24,7 @@ public class GameView extends JPanel{
         statusLabel.setHorizontalAlignment(SwingConstants.LEFT);
         statusPanel.add(statusLabel);
         game.onSwingFrame((g) -> {
-            statusLabel.setText(String.format("FPS: %d", (int)g.getAvgFps()));
+            statusLabel.setText(g.getAvgFps().toString());
         });
         statusPanel.add(Box.createHorizontalGlue());
         JToggleButton musicMute = new JToggleButton("Mute Music");

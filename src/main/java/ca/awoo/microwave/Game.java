@@ -1,5 +1,8 @@
 package ca.awoo.microwave;
 
+import static java.lang.Math.max;
+import static java.lang.Math.min;
+
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Image;
@@ -9,7 +12,6 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -155,21 +157,12 @@ public class Game extends JComponent{
             return missingImage;
         }
     }
-    
-    public void muteMusic(boolean muted){
-        muteMusic = muted;
-        if(muted){
-            sequencer.stop();
-        }else{
-            sequencer.start();
-        }
-    }
-
-    public void muteSound(boolean muted){
-        muteSound = muted;
-    }
 
     public Image getImageMasked(String name, Color mask){
+        String cacheKey = name + ":masked";
+        if(imageCache.containsKey(cacheKey)){
+            return imageCache.get(cacheKey);
+        }
         int maskPixel = mask.getRGB();
         Image base = getImage(name);
         int w = base.getWidth(null);
@@ -184,7 +177,21 @@ public class Game extends JComponent{
             }
         }
         img.setRGB(0, 0, w, h, pixels, 0, w);
+        imageCache.put(cacheKey, img);
         return img;
+    }
+    
+    public void muteMusic(boolean muted){
+        muteMusic = muted;
+        if(muted){
+            sequencer.stop();
+        }else{
+            sequencer.start();
+        }
+    }
+
+    public void muteSound(boolean muted){
+        muteSound = muted;
     }
 
     public Input getInput(){
@@ -307,17 +314,13 @@ public class Game extends JComponent{
                 }
             }
             //Render
-            try {
-                SwingUtilities.invokeAndWait(() -> {
-                    //God I hope this works
-                    repaint();
-                    for(Consumer<Game> listener : swingFrameListeners){
-                        listener.accept(this);
-                    }
-                });
-            } catch (InvocationTargetException | InterruptedException e) {
-                throw new RuntimeException(e);
-            }
+            SwingUtilities.invokeLater(() -> {
+                //God I hope this works
+                repaint();
+                for(Consumer<Game> listener : swingFrameListeners){
+                    listener.accept(this);
+                }
+            });
 
             //Timing
             long currentTime = System.nanoTime();
@@ -375,6 +378,16 @@ public class Game extends JComponent{
                 state.paint(g);
             }
         }
+        int h = getHeight();
+        int w = getWidth();
+        int start = w-times.length;
+        for(int f = 0; f < times.length; f++){
+            int i = (f + timesIndex) % times.length;
+            int millis = (int) (times[i]/1_000_000);
+            Color color = new Color(max(0, min(16*(millis-16), 255)), max(min(16*(16-millis+16), 255), 0), 0);
+            g.setColor(color);
+            g.drawLine(start+f, h, start+f, h-millis*10);
+        }
     }
 
     public void start(State<?> state){
@@ -410,14 +423,19 @@ public class Game extends JComponent{
         swingFrameListeners.add(listener);
     }
 
-    public double getAvgFps(){
+    public FPSReport getAvgFps(){
         double avgTime = 0;
+        double maxTime = 0;
         for(long time : times){
             avgTime += time;
+            if(time > maxTime){
+                maxTime = time;
+            }
         }
         avgTime /= times.length;
         avgTime /= 1_000_000_000;//Unit conversion
         double avgFrames = 1/avgTime;
-        return avgFrames;
+        double minFrames = 1_000_000_000/maxTime;
+        return new FPSReport(avgFrames, minFrames);
     }
 }
