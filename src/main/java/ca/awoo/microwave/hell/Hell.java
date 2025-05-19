@@ -35,7 +35,7 @@ public class Hell extends State<Integer>{
     private double bgx, bgy;
     private Image bgi;
 
-    private Runnable makeEnemy;
+    // private Runnable makeEnemy;
 
     public Hell(Game game){
         this.game = game;
@@ -50,24 +50,49 @@ public class Hell extends State<Integer>{
         ecs.addComponent(player, new PieceSprite(game, Type.KNIGHT, Team.BLACK, Variant.MARBLE));
         ecs.addComponent(player, new Player());
         game.playSequence(game.getSequence("/io/itch/chisech/naranoiston/B01 - Viagem ao Setor Magenta.mid"));
+        
+    }
 
-        makeEnemy = () -> {
-            long enemy = ecs.createEntity();
-            ecs.addComponent(enemy, new Transform(new Vec2(320, 50), PI/2));
-            ecs.addComponent(enemy, new PieceSprite(game, Type.BISHOP, Team.WHITE, Variant.MARBLE));
-            ecs.addComponent(enemy, MoveTo.loop(200, new Vec2(320, 240), new Vec2(640, 480), new Vec2(960, 240)));
-            ecs.addComponent(enemy, new Shoot(0.5, (e, t, ecs) -> {
-                ecs.addComponent(e, t.copy());
+    private long makePawn(Vec2 pos){
+        long enemy = ecs.createEntity();
+        ecs.addComponent(enemy, new Transform(pos, PI/2));
+        ecs.addComponent(enemy, new PieceSprite(game, Type.PAWN, Team.WHITE, Variant.MARBLE));
+        ecs.addComponent(enemy, new Shoot(0.8, (e, t, ecs) -> {
+            ecs.addComponent(e, t.copy());
+            ecs.addComponent(e, new Bullet(Bullet.Team.ENEMY));
+            ecs.addComponent(e, new StraightMovement(300));
+            ecs.addComponent(e, new Sprite(game.getImageMasked("/com/screamingbrainstudio/breakout/Balls/Shiny/Ball_Orange_Shiny-16x16.png", Color.MAGENTA), 2));
+        }));
+        ecs.addComponent(enemy, new Enemy());
+        return enemy;
+    }
+
+    private long makeBishop(Vec2 target){
+        long enemy = ecs.createEntity();
+        Vec2 start = new Vec2(target.x, -200);
+        Transform t = new Transform(start, PI/2);
+        ecs.addComponent(enemy, t);
+        ecs.addComponent(enemy, new MoveTo(target, 100));
+        ecs.addComponent(enemy, new PieceSprite(game, Type.BISHOP, Team.WHITE, Variant.MARBLE));
+        ecs.addComponent(enemy, new Shoot(0.1, new BulletGenerator() {
+            double angle = 0;
+            @Override
+            public void gen(long e, Transform t, ECS ecs) {
+                Transform bt = t.copy();
+                bt.rotation = angle;
+                angle += PI/8;
+                ecs.addComponent(e, bt);
                 ecs.addComponent(e, new Bullet(Bullet.Team.ENEMY));
                 ecs.addComponent(e, new StraightMovement(300));
-                ecs.addComponent(e, new Sprite(game.getImageMasked("/com/screamingbrainstudio/breakout/Balls/Shiny/Ball_Orange_Shiny-16x16.png", Color.MAGENTA), 2));
-            }));
-            Enemy enComp = new Enemy();
-            ecs.addComponent(enemy, enComp);
-            ecs.onRemove(enComp, makeEnemy);
-        };
-        makeEnemy.run();
-        
+                ecs.addComponent(e, new Sprite(game.getImageMasked("/com/screamingbrainstudio/breakout/Balls/Shiny/Ball_Yellow_Shiny-16x16.png", Color.MAGENTA), 2));
+            }
+        }));
+        ecs.addComponent(enemy, new Enemy());
+        for(int i = 0; i < 8; i++){
+            long pawn = makePawn(start);
+            ecs.addComponent(pawn, new Orbit(t, 100, (PI*2.0/8.0)*i, -1.0));
+        }
+        return enemy;
     }
 
     
@@ -210,6 +235,13 @@ public class Hell extends State<Integer>{
                 t.position = t.position.plus(dir.times(min(dt*m.speed, dist)));
             }
         }, Transform.class, MoveTo.class);
+        ecs.query((e, os) -> {
+            Transform t = (Transform) os[0];
+            Orbit o = (Orbit) os[1];
+            o.angle += dt*o.speed;
+            Vec2 pos = new Vec2(cos(o.angle), sin(o.angle)).times(o.distance).plus(o.target.position);
+            t.position = pos;
+        }, Transform.class, Orbit.class);
         //Enemy shoot
         ecs.query((e, os) -> {
             Transform t = (Transform) os[0];
@@ -385,18 +417,7 @@ public class Hell extends State<Integer>{
                 
                 @Override
                 public void actionPerformed(ActionEvent ev) {
-                    long enemy = ecs.createEntity();
-                    ecs.addComponent(enemy, new Transform(new Vec2(320, 50), PI/2));
-                    ecs.addComponent(enemy, new PieceSprite(game, Type.BISHOP, Team.WHITE, Variant.MARBLE));
-                    ecs.addComponent(enemy, MoveTo.loop(200, new Vec2(320, 240), new Vec2(640, 480), new Vec2(960, 240)));
-                    ecs.addComponent(enemy, new Shoot(0.5, (e, t, ecs) -> {
-                        ecs.addComponent(e, t.copy());
-                        ecs.addComponent(e, new Bullet(Bullet.Team.ENEMY));
-                        ecs.addComponent(e, new StraightMovement(300));
-                        ecs.addComponent(e, new Sprite(game.getImageMasked("/com/screamingbrainstudio/breakout/Balls/Shiny/Ball_Orange_Shiny-16x16.png", Color.MAGENTA), 2));
-                    }));
-                    Enemy enComp = new Enemy();
-                    ecs.addComponent(enemy, enComp);
+                    makeBishop(new Vec2(getWidth(), getHeight()/2));
                 }
             }
         };
