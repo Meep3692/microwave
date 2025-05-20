@@ -70,6 +70,14 @@ public class Hell extends State<Integer>{
         }));
         ecs.addComponent(player, new PieceSprite(game, Type.KNIGHT, Team.BLACK, Variant.MARBLE));
         ecs.addComponent(player, new Player());
+        ecs.addComponent(player, new Shoot(0.2, (e, t, ecs) -> {
+            ecs.addComponent(e, t.copy());
+            ecs.addComponent(e, new Bullet(Bullet.Team.PLAYER));
+            ecs.addComponent(e, new StraightMovement(300));
+            ecs.addComponent(e, new Sprite(game.getImageMasked("/com/screamingbrainstudio/breakout/Balls/Glass/Ball_Chrome_Glass-16x16.png", Color.MAGENTA), 2));
+        }));
+
+
         game.playSequence(game.getSequence("/io/itch/chisech/naranoiston/B01 - Viagem ao Setor Magenta.mid"));
         sequence(
             new Delay(2.0, () -> {
@@ -80,11 +88,16 @@ public class Hell extends State<Integer>{
                 enterPawn(new Vec2(split(3,3), scaledHeight()/8));
             }),
             new BoardClear(() -> {
-                split(2, 100, this::enterRook);
-                split(4, 100, this::enterRook);
+                split(8, 100, this::enterPawn);
+            }),
+            new Delay(4.0, () -> {
+                split(8, 100, this::enterPawn);
             }),
             new BoardClear(() -> {
-                makeBishop(new Vec2(split(5, 3), scaledHeight()/8*3));
+                split(2, 100, this::enterRook);
+            }),
+            new BoardClear(() -> {
+                split(2, 100, this::enterBishop);
             })
         );
     }
@@ -205,32 +218,51 @@ public class Hell extends State<Integer>{
         return enemy;
     }
 
-    private long makeBishop(Vec2 target){
-        long enemy = ecs.createEntity();
-        Vec2 start = new Vec2(target.x, -200);
-        Transform t = new Transform(start, PI/2);
-        ecs.addComponent(enemy, t);
-        ecs.addComponent(enemy, new MoveTo(target, 100));
-        ecs.addComponent(enemy, new PieceSprite(game, Type.BISHOP, Team.WHITE, Variant.MARBLE));
-        ecs.addComponent(enemy, new Shoot(0.1, new BulletGenerator() {
-            double angle = 0;
+    private long enterBishop(Vec2 dest){
+        long bishop = makeBishop(dest);
+        ecs.addComponent(bishop, new MoveToPlayer(150, new Vec2(1, 1).normalized(), new Vec2(-1, 1).normalized(), new Vec2(1, -1).normalized(), new Vec2(-1, -1).normalized()));
+        return bishop;
+    }
+
+    private long makeBishop(Vec2 dest){
+        Vec2 source = new Vec2(dest.x, -100);
+        long bishop = ecs.createEntity();
+        ecs.addComponent(bishop, new Transform(source, PI/2));
+        ecs.addComponent(bishop, new PieceSprite(game, Type.BISHOP, Team.WHITE, Variant.MARBLE));
+        ecs.addComponent(bishop, new Shoot(0.8, new BulletGenerator() {
             @Override
             public void gen(long e, Transform t, ECS ecs) {
-                Transform bt = t.copy();
-                bt.rotation = angle;
-                angle += PI/8;
-                ecs.addComponent(e, bt);
+                Transform tb = t.copy();
+                tb.rotation = PI/2*0+PI/4;
+                ecs.addComponent(e, tb);
                 ecs.addComponent(e, new Bullet(Bullet.Team.ENEMY));
                 ecs.addComponent(e, new StraightMovement(300));
-                ecs.addComponent(e, new Sprite(game.getImageMasked("/com/screamingbrainstudio/breakout/Balls/Shiny/Ball_Yellow_Shiny-16x16.png", Color.MAGENTA), 2));
+                ecs.addComponent(e, new Sprite(game.getImageMasked("/com/screamingbrainstudio/breakout/Balls/Shiny/Ball_Orange_Shiny-16x16.png", Color.MAGENTA), 2));
+                e = ecs.createEntity();
+                tb = t.copy();
+                tb.rotation = PI/2*1+PI/4;
+                ecs.addComponent(e, tb);
+                ecs.addComponent(e, new Bullet(Bullet.Team.ENEMY));
+                ecs.addComponent(e, new StraightMovement(300));
+                ecs.addComponent(e, new Sprite(game.getImageMasked("/com/screamingbrainstudio/breakout/Balls/Shiny/Ball_Orange_Shiny-16x16.png", Color.MAGENTA), 2));
+                e = ecs.createEntity();
+                tb = t.copy();
+                tb.rotation = PI/2*2+PI/4;
+                ecs.addComponent(e, tb);
+                ecs.addComponent(e, new Bullet(Bullet.Team.ENEMY));
+                ecs.addComponent(e, new StraightMovement(300));
+                ecs.addComponent(e, new Sprite(game.getImageMasked("/com/screamingbrainstudio/breakout/Balls/Shiny/Ball_Orange_Shiny-16x16.png", Color.MAGENTA), 2));
+                e = ecs.createEntity();
+                tb = t.copy();
+                tb.rotation = PI/2*3+PI/4;
+                ecs.addComponent(e, tb);
+                ecs.addComponent(e, new Bullet(Bullet.Team.ENEMY));
+                ecs.addComponent(e, new StraightMovement(300));
+                ecs.addComponent(e, new Sprite(game.getImageMasked("/com/screamingbrainstudio/breakout/Balls/Shiny/Ball_Orange_Shiny-16x16.png", Color.MAGENTA), 2));
             }
         }));
-        ecs.addComponent(enemy, new Enemy(50));
-        for(int i = 0; i < 8; i++){
-            long pawn = makePawn(start);
-            ecs.addComponent(pawn, new Orbit(t, 100, (PI*2.0/8.0)*i, -1.0));
-        }
-        return enemy;
+        ecs.addComponent(bishop, new Enemy(50));
+        return bishop;
     }
 
     private void sequence(Scheduler... items){
@@ -278,28 +310,6 @@ public class Hell extends State<Integer>{
             if(input.isHeld(Input.RIGHT)){
                 dx += p.speed*dt*speedMult;
             }
-            if(input.isHeld(Input.FIRE) && p.fireCooldown <= 0){
-                p.fireCooldown = p.fireRate;
-                long bullet = ecs.createEntity();
-                ecs.addComponent(bullet, new Transform(t.position, -PI/2));
-                ecs.addComponent(bullet, new Bullet(Bullet.Team.PLAYER));
-                ecs.addComponent(bullet, new StraightMovement(300));
-                ecs.addComponent(bullet, new Sprite(game.getImageMasked("/com/screamingbrainstudio/breakout/Balls/Glass/Ball_Chrome_Glass-16x16.png", Color.MAGENTA), 2));
-                Ref<Transform> enemy = new Ref<>(null);
-                ecs.query((en, eos) -> {
-                    Transform et = (Transform)eos[0];
-                    if(enemy.contents == null || t.position.distance(et.position) < t.position.distance(enemy.contents.position)){
-                        enemy.contents = et;
-                    }
-                }, Transform.class, Enemy.class);
-                if(enemy.contents != null){
-                    Homing homing = new Homing(enemy.contents);
-                    ecs.addComponent(bullet, homing);
-                    ecs.onRemove(enemy.contents, () -> {
-                        ecs.removeComponent(bullet, homing);
-                    });
-                }
-            }
             if(input.isPressed(Input.SHIFT)){
                 ecs.addComponent(e, dot);
             }
@@ -322,6 +332,22 @@ public class Hell extends State<Integer>{
             }
             t.position = new Vec2(newx, newy);
         }, Transform.class, PieceSprite.class, Player.class);
+        //Player shoot
+        ecs.query((e, os) -> {
+            Transform t = (Transform) os[0];
+            Shoot s = (Shoot) os[1];
+            Input input = game.getInput();
+            s.coolDown -= dt;
+            if(input.isHeld(Input.FIRE) && s.coolDown <= 0){
+                long bullet = ecs.createEntity();
+                s.bulletGenerator.gen(bullet, t, ecs);
+                s.coolDown = s.rate;
+                s.fired++;
+                if(s.max > 0 && s.fired >= s.max){
+                    ecs.removeComponent(e, s);
+                }
+            }
+        }, Transform.class, Shoot.class, Player.class);
         //Bullet homing
         ecs.query((e, os) -> {
             Transform t = (Transform)os[0];
@@ -491,7 +517,7 @@ public class Hell extends State<Integer>{
                     ecs.removeComponent(e, s);
                 }
             }
-        }, Transform.class, Shoot.class);
+        }, Transform.class, Shoot.class, Enemy.class);
         
         //Speen
         ecs.query((e, os) -> {
