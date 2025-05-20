@@ -13,7 +13,6 @@ import java.util.function.Consumer;
 
 import javax.swing.AbstractAction;
 import javax.swing.Action;
-
 import ca.awoo.microwave.Game;
 import ca.awoo.microwave.Input;
 import ca.awoo.microwave.Ref;
@@ -51,6 +50,7 @@ public class Hell extends State<Integer>{
     public Hell(Game game){
         this.game = game;
         this.ecs = new ECS();
+        setSize(640, 480);
         dot = new Sprite(game.getImageMasked("/com/screamingbrainstudio/breakout/Balls/Glossy/Ball_Red_Glossy-16x16.png", Color.MAGENTA));
         dot.layer = 1;
 
@@ -72,26 +72,19 @@ public class Hell extends State<Integer>{
         ecs.addComponent(player, new Player());
         game.playSequence(game.getSequence("/io/itch/chisech/naranoiston/B01 - Viagem ao Setor Magenta.mid"));
         sequence(
-            // new Delay(2.0, () -> {
-            //     enterPawn(new Vec2(split(3,2), scaledHeight()/8));
-            // }),
-            // new Delay(3.0, () -> {
-            //     enterPawn(new Vec2(split(3,1), scaledHeight()/8));
-            //     enterPawn(new Vec2(split(3,3), scaledHeight()/8));
-            // }),
+            new Delay(2.0, () -> {
+                enterPawn(new Vec2(split(3,2), scaledHeight()/8));
+            }),
+            new Delay(3.0, () -> {
+                enterPawn(new Vec2(split(3,1), scaledHeight()/8));
+                enterPawn(new Vec2(split(3,3), scaledHeight()/8));
+            }),
             new BoardClear(() -> {
-                split(3, 100, this::enterRook);
+                split(2, 100, this::enterRook);
+                split(4, 100, this::enterRook);
             }),
             new BoardClear(() -> {
                 makeBishop(new Vec2(split(5, 3), scaledHeight()/8*3));
-            }),
-            new Delay(1.5, () -> {
-                makeBishop(new Vec2(split(5, 2), scaledHeight()/8*2));
-                makeBishop(new Vec2(split(5, 4), scaledHeight()/8*2));
-            }),
-            new Delay(1.5, () -> {
-                makeBishop(new Vec2(split(5, 1), scaledHeight()/8));
-                makeBishop(new Vec2(split(5, 5), scaledHeight()/8));
             })
         );
     }
