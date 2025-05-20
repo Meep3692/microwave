@@ -2,9 +2,12 @@ package ca.awoo.microwave.hell;
 
 import java.awt.Color;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.event.ActionEvent;
+import java.awt.geom.AffineTransform;
 import java.util.Optional;
+import java.util.Random;
 
 import javax.swing.AbstractAction;
 import javax.swing.Action;
@@ -35,7 +38,7 @@ public class Hell extends State<Integer>{
     private double bgx, bgy;
     private Image bgi;
 
-    // private Runnable makeEnemy;
+    private Random random = new Random();
 
     public Hell(Game game){
         this.game = game;
@@ -50,7 +53,63 @@ public class Hell extends State<Integer>{
         ecs.addComponent(player, new PieceSprite(game, Type.KNIGHT, Team.BLACK, Variant.MARBLE));
         ecs.addComponent(player, new Player());
         game.playSequence(game.getSequence("/io/itch/chisech/naranoiston/B01 - Viagem ao Setor Magenta.mid"));
-        
+        sequence(
+            new Delay(2.0, () -> {
+                enterPawn(new Vec2(split(3,2), scaledHeight()/8));
+            }),
+            new Delay(3.0, () -> {
+                enterPawn(new Vec2(split(3,1), scaledHeight()/8));
+                enterPawn(new Vec2(split(3,3), scaledHeight()/8));
+            }),
+            new BoardClear(() -> {
+                makeBishop(new Vec2(split(5, 3), scaledHeight()/8*3));
+            }),
+            new Delay(1.5, () -> {
+                makeBishop(new Vec2(split(5, 2), scaledHeight()/8*2));
+                makeBishop(new Vec2(split(5, 4), scaledHeight()/8*2));
+            }),
+            new Delay(1.5, () -> {
+                makeBishop(new Vec2(split(5, 1), scaledHeight()/8));
+                makeBishop(new Vec2(split(5, 5), scaledHeight()/8));
+            })
+        );
+    }
+
+    private double split(int d, int i){
+        return scaledWidth()/(d+1)*i;
+    }
+
+    private double scaledWidth(){
+        return getWidth()/renderScale;
+    }
+    private double scaledHeight(){
+        return getHeight()/renderScale;
+    }
+
+    private long enterPawn(Vec2 dest){
+        Vec2 source = new Vec2(dest.x, -100);
+        long pawn = makePawn(source);
+        ecs.addComponent(pawn, new MoveTo(dest, 150));
+        return pawn;
+    }
+
+    private void particle(Vec2 pos){
+        double rot = random.nextDouble()*2*PI;
+        Vec2 dest = new Vec2(cos(rot), sin(rot)).times(random.nextDouble()*100).plus(pos);
+        long entity = ecs.createEntity();
+        ecs.addComponent(entity, new Transform(pos, rot));
+        ecs.addComponent(entity, new MoveTo(dest, (random.nextDouble()+1)*100));
+        ecs.addComponent(entity, new Speen((random.nextDouble()-0.5)*2));
+        ecs.addComponent(entity, new Sprite(game.getImage("/ca/awoo/microwave/hell/card_small.png")));
+        ecs.addComponent(entity, new Delay(random.nextDouble(), () -> {
+            ecs.removeEntity(entity);
+        }));
+    }
+
+    private void particles(Vec2 pos, int c){
+        for(int i = 0; i < c; i++){
+            particle(pos);
+        }
     }
 
     private long makePawn(Vec2 pos){
@@ -93,6 +152,20 @@ public class Hell extends State<Integer>{
             ecs.addComponent(pawn, new Orbit(t, 100, (PI*2.0/8.0)*i, -1.0));
         }
         return enemy;
+    }
+
+    private void sequence(Scheduler... items){
+        long entity = ecs.createEntity();
+        for(int i = 0; i < items.length - 1; i++){
+            Runnable run = items[i].getRun();
+            final int j = i;
+            Runnable newRun = () -> {
+                run.run();
+                ecs.addComponent(entity, items[j+1]);
+            };
+            items[i].setRun(newRun);
+        }
+        ecs.addComponent(entity, items[0]);
     }
 
     
@@ -202,6 +275,7 @@ public class Hell extends State<Integer>{
                 if(b.team == Bullet.Team.ENEMY && et.position.distance(bt.position) < 16){
                     game.playSound("/io/itch/brackeys/sound/hurt.wav");
                     ecs.removeEntity(bullet);
+                    particles(et.position, 10);
                 }
             }, Transform.class, Bullet.class);
         }, Transform.class, Player.class);
@@ -216,6 +290,7 @@ public class Hell extends State<Integer>{
                     game.playSound("/io/itch/brackeys/sound/hurt.wav");
                     ecs.removeEntity(enemy);
                     ecs.removeEntity(bullet);
+                    particles(et.position, 10);
                 }
             }, Transform.class, Bullet.class);
         }, Transform.class, Enemy.class);
@@ -258,6 +333,36 @@ public class Hell extends State<Integer>{
             }
         }, Transform.class, Shoot.class);
         
+        //Speen
+        ecs.query((e, os) -> {
+            Transform t = (Transform)os[0];
+            Speen s = (Speen)os[1];
+            t.rotation += s.v*dt;
+        }, Transform.class, Speen.class);
+
+        //Delay
+        ecs.query((e, os) -> {
+            Delay d = (Delay)os[0];
+            d.delay -= dt;
+            if(d.delay <= 0){
+                d.getRun().run();
+                ecs.removeComponent(e, d);
+            }
+        }, Delay.class);
+
+        //Board clear
+        Ref<Boolean> enemiesLeft = new Ref<Boolean>(false);
+        ecs.query((e, os) -> {
+            enemiesLeft.contents = true;
+        }, Enemy.class);
+        if(!enemiesLeft.contents){
+            ecs.query((e, os) -> {
+                BoardClear b = (BoardClear)os[0];
+                b.getRun().run();
+                ecs.removeComponent(e, b);
+            }, BoardClear.class);
+        }
+
         bgy += 100*dt;
 
         if(game.getInput().isPressed(Input.EXIT)){
@@ -304,7 +409,12 @@ public class Hell extends State<Integer>{
             int w = (int) (s.image.getWidth(null)*renderScale);
             int h = (int) (s.image.getHeight(null)*renderScale);
             drawStack.add(() -> {
+                Graphics2D g2d = (Graphics2D)g;
+                AffineTransform orig = g2d.getTransform();
+                AffineTransform a = AffineTransform.getRotateInstance(t.rotation, x+w/2, y+h/2);
+                g2d.setTransform(a);
                 g.drawImage(s.image, x, y, w, h, null);
+                g2d.setTransform(orig);
             }, s.layer);
         }, Transform.class, Sprite.class);
         ecs.query((e, os) -> {
