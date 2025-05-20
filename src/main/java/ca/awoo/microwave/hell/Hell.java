@@ -62,7 +62,11 @@ public class Hell extends State<Integer>{
         life = new PieceSprite(game, Type.KNIGHT, Team.BLACK, Variant.MARBLE);
         //Create player
         long player = ecs.createEntity();
-        ecs.addComponent(player, new Transform(new Vec2(320, 240), -PI/2));
+        Transform pt = new Transform(new Vec2(640-uiWidth/2, 480), -PI/2);
+        ecs.addComponent(player, pt);
+        ecs.addComponent(player, new Delay(0.5, () -> {
+            pt.position = new Vec2(scaledWidth()/2, scaledHeight()/2);
+        }));
         ecs.addComponent(player, new PieceSprite(game, Type.KNIGHT, Team.BLACK, Variant.MARBLE));
         ecs.addComponent(player, new Player());
         game.playSequence(game.getSequence("/io/itch/chisech/naranoiston/B01 - Viagem ao Setor Magenta.mid"));
@@ -184,8 +188,8 @@ public class Hell extends State<Integer>{
     
     @Override
     public Optional<Integer> update(Game game, double dt) {
-        double w = getWidth()/renderScale;
-        double h = getHeight()/renderScale;
+        double w = scaledWidth();
+        double h = scaledHeight();
         //Player movement
         ecs.query((e, os) -> {
             Transform   t = (Transform)   os[0];
@@ -240,8 +244,21 @@ public class Hell extends State<Integer>{
             if(input.isReleased(Input.SHIFT)){
                 ecs.removeComponent(e, dot);
             }
-            
-            t.position = t.position.plus(dx, dy);
+            double newx = t.position.x + dx;
+            double newy = t.position.y + dy;
+            if(newx < 0){
+                newx = 0;
+            }
+            if(newy < 0){
+                newy = 0;
+            }
+            if(newx > w){
+                newx = w;
+            }
+            if(newy > h){
+                newy = h;
+            }
+            t.position = new Vec2(newx, newy);
         }, Transform.class, PieceSprite.class, Player.class);
         //Bullet homing
         ecs.query((e, os) -> {
