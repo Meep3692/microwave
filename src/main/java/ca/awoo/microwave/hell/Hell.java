@@ -42,8 +42,10 @@ public class Hell extends State<Integer>{
     private Random random = new Random();
 
     private int uiWidth = 148;
-    private int score = 1234567890;
+    private int score = 0;
+    private int lives = 5;
     private Image[] scoreDigits = new Image[10];
+    private final PieceSprite life;
 
     public Hell(Game game){
         this.game = game;
@@ -56,6 +58,8 @@ public class Hell extends State<Integer>{
         for(int i = 0; i < 10; i++){
             scoreDigits[i] = game.getImage("/ca/awoo/microwave/numbers/" + i + ".png");
         }
+
+        life = new PieceSprite(game, Type.KNIGHT, Team.BLACK, Variant.MARBLE);
         //Create player
         long player = ecs.createEntity();
         ecs.addComponent(player, new Transform(new Vec2(320, 240), -PI/2));
@@ -131,7 +135,7 @@ public class Hell extends State<Integer>{
             ecs.addComponent(e, new StraightMovement(300));
             ecs.addComponent(e, new Sprite(game.getImageMasked("/com/screamingbrainstudio/breakout/Balls/Shiny/Ball_Orange_Shiny-16x16.png", Color.MAGENTA), 2));
         }));
-        ecs.addComponent(enemy, new Enemy());
+        ecs.addComponent(enemy, new Enemy(10));
         return enemy;
     }
 
@@ -155,7 +159,7 @@ public class Hell extends State<Integer>{
                 ecs.addComponent(e, new Sprite(game.getImageMasked("/com/screamingbrainstudio/breakout/Balls/Shiny/Ball_Yellow_Shiny-16x16.png", Color.MAGENTA), 2));
             }
         }));
-        ecs.addComponent(enemy, new Enemy());
+        ecs.addComponent(enemy, new Enemy(50));
         for(int i = 0; i < 8; i++){
             long pawn = makePawn(start);
             ecs.addComponent(pawn, new Orbit(t, 100, (PI*2.0/8.0)*i, -1.0));
@@ -278,20 +282,39 @@ public class Hell extends State<Integer>{
         //Kill player
         ecs.query((player, os) -> {
             Transform et = (Transform) os[0];
-            ecs.query((bullet, bos) -> {
-                Transform bt = (Transform) bos[0];
-                Bullet b = (Bullet)bos[1];
-                if(b.team == Bullet.Team.ENEMY && et.position.distance(bt.position) < 16){
-                    game.playSound("/io/itch/brackeys/sound/hurt.wav");
-                    ecs.removeEntity(bullet);
-                    particles(et.position, game.getImage("/ca/awoo/microwave/hell/card_small_blue.png"), 10);
-                }
-            }, Transform.class, Bullet.class);
+            Player p = (Player) os[1];
+            if(p.iframes > 0){
+                p.iframes -= dt;
+            }else{
+                ecs.query((bullet, bos) -> {
+                    Transform bt = (Transform) bos[0];
+                    Bullet b = (Bullet)bos[1];
+                    if(b.team == Bullet.Team.ENEMY && et.position.distance(bt.position) < 16){
+                        game.playSound("/io/itch/brackeys/sound/hurt.wav");
+                        ecs.removeEntity(bullet);
+                        particles(et.position, game.getImage("/ca/awoo/microwave/hell/card_small_blue.png"), 10);
+                        p.iframes = 2.0;
+                        lives--;
+                    }
+                }, Transform.class, Bullet.class);
+            }
         }, Transform.class, Player.class);
+
+        //Flash player
+        ecs.query((e, os) -> {
+            Player p = (Player) os[0];
+            PieceSprite s = (PieceSprite) os[1];
+            if(p.iframes > 0){
+                s.visible = p.iframes%0.2<0.1;
+            }else{
+                s.visible = true;
+            }
+        }, Player.class, PieceSprite.class);
 
         //Kill enemies
         ecs.query((enemy, os) -> {
             Transform et = (Transform) os[0];
+            Enemy en = (Enemy) os[1];
             ecs.query((bullet, bos) -> {
                 Transform bt = (Transform) bos[0];
                 Bullet b = (Bullet)bos[1];
@@ -300,6 +323,7 @@ public class Hell extends State<Integer>{
                     ecs.removeEntity(enemy);
                     ecs.removeEntity(bullet);
                     particles(et.position, game.getImage("/ca/awoo/microwave/hell/card_small_red.png"), 10);
+                    score += en.points;
                 }
             }, Transform.class, Bullet.class);
         }, Transform.class, Enemy.class);
@@ -448,6 +472,7 @@ public class Hell extends State<Integer>{
         ecs.query((e, os) -> {
             Transform t = (Transform) os[0];
             PieceSprite s = (PieceSprite) os[1];
+            if(!s.visible) return;
             int x = (int) ((t.position.x - 64)*renderScale);
             int y = (int) ((t.position.y - 64 - 16)*renderScale);
             double drot = t.rotation;
@@ -516,6 +541,16 @@ public class Hell extends State<Integer>{
             g.drawImage(scoreDigits[digit], dx+1, sy+1, null);
         }
 
+        int ly = uisy+40+22+8;
+        int lx = sx;
+        int lw = uiWidth-16;
+        for(int i = 0; i < lives; i++){
+            double split = lw/((double)lives+1.0)*(i+1);
+            int x = (int) (lx + split);
+            life.draw(g, Direction.EAST, (int)(x - 64*renderScale), ly, renderScale);
+        }
+
+        //Debug
         if(game.isDebugView()){
             ecs.query((e, os) -> {
                 Transform t = (Transform) os[0];
