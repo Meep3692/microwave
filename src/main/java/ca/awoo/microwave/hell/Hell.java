@@ -1,6 +1,7 @@
 package ca.awoo.microwave.hell;
 
 import java.awt.Color;
+import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
@@ -40,6 +41,10 @@ public class Hell extends State<Integer>{
 
     private Random random = new Random();
 
+    private int uiWidth = 148;
+    private int score = 1234567890;
+    private Image[] scoreDigits = new Image[10];
+
     public Hell(Game game){
         this.game = game;
         this.ecs = new ECS();
@@ -47,6 +52,10 @@ public class Hell extends State<Integer>{
         dot.layer = 1;
 
         bgi = game.getImage("/com/screamingbrainstudio/space/Purple Nebula/Purple_Nebula_01-512x512.png");
+
+        for(int i = 0; i < 10; i++){
+            scoreDigits[i] = game.getImage("/ca/awoo/microwave/numbers/" + i + ".png");
+        }
         //Create player
         long player = ecs.createEntity();
         ecs.addComponent(player, new Transform(new Vec2(320, 240), -PI/2));
@@ -80,7 +89,7 @@ public class Hell extends State<Integer>{
     }
 
     private double scaledWidth(){
-        return getWidth()/renderScale;
+        return (getWidth()-uiWidth)/renderScale;
     }
     private double scaledHeight(){
         return getHeight()/renderScale;
@@ -374,6 +383,25 @@ public class Hell extends State<Integer>{
     public boolean isTransparent() {
         return false;
     }
+
+    private void textureArea(Graphics g, int x, int y, int x2, int y2, Image image){
+        int by = y;
+        int iw = image.getWidth(null);
+        int ih = image.getHeight(null);
+        while(x < x2){
+            y = by;
+            while(y < y2){
+                int rx = x2-x;
+                int ry = y2-y;
+                int dw = min(rx, iw);
+                int dh = min(ry, ih);
+                g.drawImage(image, x, y, x+dw, y+dh, 0, 0, dw, dh, null);
+                y+=ih;
+            }
+            x+=iw;
+        }
+    }
+
     private final PrioritySet<Runnable> drawStack = new PrioritySet<>();
     @Override
     public void paint(Graphics g) {
@@ -469,6 +497,25 @@ public class Hell extends State<Integer>{
         for(Runnable r : drawStack){
             r.run();
         }
+        //UI
+        int uisx = getWidth()-uiWidth;
+        int uisy = 0;
+        textureArea(g, uisx, uisy, getWidth(), getHeight(), game.getImage("/com/screamingbrainstudio/basematerials/Stone/Mat_Stone_Black_02-128x128.png"));
+        Font uiFont = new Font("monospace", Font.BOLD, 32);
+        g.setFont(uiFont);
+        g.setColor(Color.WHITE);
+        g.drawString("Score", uisx+8, uisy+32);
+        int digits = 10;
+        int sx = uisx+8;
+        int sy = uisy+40;
+        g.draw3DRect(sx, sy, 13*digits+1, 22, getFocusTraversalKeysEnabled());
+        for(int i = 0; i < digits; i++){
+            int mag = (int) Math.pow(10, i);
+            int digit = (score/mag)%10;
+            int dx = sx+13*digits-13*(i+1);
+            g.drawImage(scoreDigits[digit], dx+1, sy+1, null);
+        }
+
         if(game.isDebugView()){
             ecs.query((e, os) -> {
                 Transform t = (Transform) os[0];
