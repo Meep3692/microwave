@@ -106,7 +106,10 @@ public class Hell extends State<Integer>{
     private long enterPawn(Vec2 dest){
         Vec2 source = new Vec2(dest.x, -100);
         long pawn = makePawn(source);
-        ecs.addComponent(pawn, new MoveTo(dest, 150));
+        // ecs.addComponent(pawn, new MoveTo(dest, 150));
+        ZigZag z = new ZigZag(dest.x, 100, 100);
+        z.ratio = 0.5;
+        ecs.addComponent(pawn, z);
         return pawn;
     }
 
@@ -133,11 +136,26 @@ public class Hell extends State<Integer>{
         long enemy = ecs.createEntity();
         ecs.addComponent(enemy, new Transform(pos, PI/2));
         ecs.addComponent(enemy, new PieceSprite(game, Type.PAWN, Team.WHITE, Variant.MARBLE));
-        ecs.addComponent(enemy, new Shoot(0.8, (e, t, ecs) -> {
-            ecs.addComponent(e, t.copy());
-            ecs.addComponent(e, new Bullet(Bullet.Team.ENEMY));
-            ecs.addComponent(e, new StraightMovement(300));
-            ecs.addComponent(e, new Sprite(game.getImageMasked("/com/screamingbrainstudio/breakout/Balls/Shiny/Ball_Orange_Shiny-16x16.png", Color.MAGENTA), 2));
+        ecs.addComponent(enemy, new Shoot(0.4, new BulletGenerator() {
+            int angle = 0;
+            @Override
+            public void gen(long e, Transform t, ECS ecs) {
+                Transform tb = t.copy();
+                if(angle == 0){
+                    tb.rotation = PI/4;
+                    angle = 1;
+                }else {
+                    tb.rotation = PI/4*3;
+                    angle = 0;
+                }
+                ecs.addComponent(e, tb);
+                ecs.addComponent(e, new Bullet(Bullet.Team.ENEMY));
+                ecs.addComponent(e, new StraightMovement(300));
+                ecs.addComponent(e, new Sprite(game.getImageMasked("/com/screamingbrainstudio/breakout/Balls/Shiny/Ball_Orange_Shiny-16x16.png", Color.MAGENTA), 2));
+                ecs.addComponent(e, new Delay(1.0, () -> {
+                    ecs.removeEntity(e);
+                }));
+            }
         }));
         ecs.addComponent(enemy, new Enemy(10));
         return enemy;
@@ -360,6 +378,26 @@ public class Hell extends State<Integer>{
                 t.position = t.position.plus(dir.times(min(dt*m.speed, dist)));
             }
         }, Transform.class, MoveTo.class);
+        ecs.query((e, os) -> {
+            Transform t = (Transform) os[0];
+            ZigZag z = (ZigZag) os[1];
+            double newy = t.position.y + z.speed*dt*z.ratio;
+            double newx;
+            if(z.right){
+                newx = t.position.x + z.speed*dt;
+            }else{
+                newx = t.position.x - z.speed*dt;
+            }
+            if(newx > z.center+z.width){
+                z.right = false;
+            }else if(newx < z.center-z.width){
+                z.right = true;
+            }
+            if(newy > h+100){
+                newy = -100;
+            }
+            t.position = new Vec2(newx, newy);
+        }, Transform.class, ZigZag.class);
         ecs.query((e, os) -> {
             Transform t = (Transform) os[0];
             Orbit o = (Orbit) os[1];
