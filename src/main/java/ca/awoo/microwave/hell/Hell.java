@@ -93,22 +93,22 @@ public class Hell extends State<Integer>{
         return pawn;
     }
 
-    private void particle(Vec2 pos){
+    private void particle(Vec2 pos, Image image){
         double rot = random.nextDouble()*2*PI;
         Vec2 dest = new Vec2(cos(rot), sin(rot)).times(random.nextDouble()*100).plus(pos);
         long entity = ecs.createEntity();
         ecs.addComponent(entity, new Transform(pos, rot));
         ecs.addComponent(entity, new MoveTo(dest, (random.nextDouble()+1)*100));
-        ecs.addComponent(entity, new Speen((random.nextDouble()-0.5)*2));
-        ecs.addComponent(entity, new Sprite(game.getImage("/ca/awoo/microwave/hell/card_small.png")));
+        ecs.addComponent(entity, new Speen((random.nextDouble()-0.5)*20));
+        ecs.addComponent(entity, new Sprite(image));
         ecs.addComponent(entity, new Delay(random.nextDouble(), () -> {
             ecs.removeEntity(entity);
         }));
     }
 
-    private void particles(Vec2 pos, int c){
+    private void particles(Vec2 pos, Image image, int c){
         for(int i = 0; i < c; i++){
-            particle(pos);
+            particle(pos, image);
         }
     }
 
@@ -275,7 +275,7 @@ public class Hell extends State<Integer>{
                 if(b.team == Bullet.Team.ENEMY && et.position.distance(bt.position) < 16){
                     game.playSound("/io/itch/brackeys/sound/hurt.wav");
                     ecs.removeEntity(bullet);
-                    particles(et.position, 10);
+                    particles(et.position, game.getImage("/ca/awoo/microwave/hell/card_small_blue.png"), 10);
                 }
             }, Transform.class, Bullet.class);
         }, Transform.class, Player.class);
@@ -290,7 +290,7 @@ public class Hell extends State<Integer>{
                     game.playSound("/io/itch/brackeys/sound/hurt.wav");
                     ecs.removeEntity(enemy);
                     ecs.removeEntity(bullet);
-                    particles(et.position, 10);
+                    particles(et.position, game.getImage("/ca/awoo/microwave/hell/card_small_red.png"), 10);
                 }
             }, Transform.class, Bullet.class);
         }, Transform.class, Enemy.class);
