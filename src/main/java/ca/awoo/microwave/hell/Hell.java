@@ -9,6 +9,7 @@ import java.awt.event.ActionEvent;
 import java.awt.geom.AffineTransform;
 import java.util.Optional;
 import java.util.Random;
+import java.util.function.Consumer;
 
 import javax.swing.AbstractAction;
 import javax.swing.Action;
@@ -71,12 +72,15 @@ public class Hell extends State<Integer>{
         ecs.addComponent(player, new Player());
         game.playSequence(game.getSequence("/io/itch/chisech/naranoiston/B01 - Viagem ao Setor Magenta.mid"));
         sequence(
-            new Delay(2.0, () -> {
-                enterPawn(new Vec2(split(3,2), scaledHeight()/8));
-            }),
-            new Delay(3.0, () -> {
-                enterPawn(new Vec2(split(3,1), scaledHeight()/8));
-                enterPawn(new Vec2(split(3,3), scaledHeight()/8));
+            // new Delay(2.0, () -> {
+            //     enterPawn(new Vec2(split(3,2), scaledHeight()/8));
+            // }),
+            // new Delay(3.0, () -> {
+            //     enterPawn(new Vec2(split(3,1), scaledHeight()/8));
+            //     enterPawn(new Vec2(split(3,3), scaledHeight()/8));
+            // }),
+            new BoardClear(() -> {
+                split(3, 100, this::enterRook);
             }),
             new BoardClear(() -> {
                 makeBishop(new Vec2(split(5, 3), scaledHeight()/8*3));
@@ -96,21 +100,17 @@ public class Hell extends State<Integer>{
         return scaledWidth()/(d+1)*i;
     }
 
+    private void split(int d, double y, Consumer<Vec2> spawn){
+        for(int i = 1; i <= d; i++){
+            spawn.accept(new Vec2(split(d, i), y));
+        }
+    }
+
     private double scaledWidth(){
         return (getWidth()-uiWidth)/renderScale;
     }
     private double scaledHeight(){
         return getHeight()/renderScale;
-    }
-
-    private long enterPawn(Vec2 dest){
-        Vec2 source = new Vec2(dest.x, -100);
-        long pawn = makePawn(source);
-        // ecs.addComponent(pawn, new MoveTo(dest, 150));
-        ZigZag z = new ZigZag(dest.x, 100, 100);
-        z.ratio = 0.5;
-        ecs.addComponent(pawn, z);
-        return pawn;
     }
 
     private void particle(Vec2 pos, Image image){
@@ -130,6 +130,57 @@ public class Hell extends State<Integer>{
         for(int i = 0; i < c; i++){
             particle(pos, image);
         }
+    }
+
+    private long enterRook(Vec2 dest){
+        Vec2 source = new Vec2(dest.x, -100);
+        long rook = ecs.createEntity();
+        ecs.addComponent(rook, new Transform(source, PI/2));
+        ecs.addComponent(rook, new PieceSprite(game, Type.ROOK, Team.WHITE, Variant.MARBLE));
+        ecs.addComponent(rook, new Shoot(0.8, new BulletGenerator() {
+            @Override
+            public void gen(long e, Transform t, ECS ecs) {
+                Transform tb = t.copy();
+                ecs.addComponent(e, tb);
+                ecs.addComponent(e, new Bullet(Bullet.Team.ENEMY));
+                ecs.addComponent(e, new StraightMovement(300));
+                ecs.addComponent(e, new Sprite(game.getImageMasked("/com/screamingbrainstudio/breakout/Balls/Shiny/Ball_Orange_Shiny-16x16.png", Color.MAGENTA), 2));
+                e = ecs.createEntity();
+                tb = t.copy();
+                tb.rotation = PI;
+                ecs.addComponent(e, tb);
+                ecs.addComponent(e, new Bullet(Bullet.Team.ENEMY));
+                ecs.addComponent(e, new StraightMovement(300));
+                ecs.addComponent(e, new Sprite(game.getImageMasked("/com/screamingbrainstudio/breakout/Balls/Shiny/Ball_Orange_Shiny-16x16.png", Color.MAGENTA), 2));
+                e = ecs.createEntity();
+                tb = t.copy();
+                tb.rotation = PI/2*3;
+                ecs.addComponent(e, tb);
+                ecs.addComponent(e, new Bullet(Bullet.Team.ENEMY));
+                ecs.addComponent(e, new StraightMovement(300));
+                ecs.addComponent(e, new Sprite(game.getImageMasked("/com/screamingbrainstudio/breakout/Balls/Shiny/Ball_Orange_Shiny-16x16.png", Color.MAGENTA), 2));
+                e = ecs.createEntity();
+                tb = t.copy();
+                tb.rotation = 0;
+                ecs.addComponent(e, tb);
+                ecs.addComponent(e, new Bullet(Bullet.Team.ENEMY));
+                ecs.addComponent(e, new StraightMovement(300));
+                ecs.addComponent(e, new Sprite(game.getImageMasked("/com/screamingbrainstudio/breakout/Balls/Shiny/Ball_Orange_Shiny-16x16.png", Color.MAGENTA), 2));
+            }
+        }));
+        ecs.addComponent(rook, new Enemy(50));
+        ecs.addComponent(rook, new MoveToPlayer(150, new Vec2(0, 1), new Vec2(1, 0), new Vec2(0, -1), new Vec2(-1, 0)));
+        return rook;
+    }
+
+    private long enterPawn(Vec2 dest){
+        Vec2 source = new Vec2(dest.x, -100);
+        long pawn = makePawn(source);
+        // ecs.addComponent(pawn, new MoveTo(dest, 150));
+        ZigZag z = new ZigZag(dest.x, 100, 100);
+        z.ratio = 0.5;
+        ecs.addComponent(pawn, z);
+        return pawn;
     }
 
     private long makePawn(Vec2 pos){
@@ -363,6 +414,7 @@ public class Hell extends State<Integer>{
             }, Transform.class, Bullet.class);
         }, Transform.class, Enemy.class);
         //Move enemy
+        //MoveTo
         ecs.query((e, os) -> {
             Transform t = (Transform) os[0];
             MoveTo m = (MoveTo) os[1];
@@ -378,6 +430,8 @@ public class Hell extends State<Integer>{
                 t.position = t.position.plus(dir.times(min(dt*m.speed, dist)));
             }
         }, Transform.class, MoveTo.class);
+
+        //ZigZag
         ecs.query((e, os) -> {
             Transform t = (Transform) os[0];
             ZigZag z = (ZigZag) os[1];
@@ -398,6 +452,7 @@ public class Hell extends State<Integer>{
             }
             t.position = new Vec2(newx, newy);
         }, Transform.class, ZigZag.class);
+        //Orbit
         ecs.query((e, os) -> {
             Transform t = (Transform) os[0];
             Orbit o = (Orbit) os[1];
@@ -405,6 +460,30 @@ public class Hell extends State<Integer>{
             Vec2 pos = new Vec2(cos(o.angle), sin(o.angle)).times(o.distance).plus(o.target.position);
             t.position = pos;
         }, Transform.class, Orbit.class);
+        //MoveToPlayer
+        ecs.query((e, os) -> {
+            Transform t = (Transform) os[0];
+            MoveToPlayer mtp = (MoveToPlayer) os[1];
+            Ref<Transform> rp = new Ref<>(null);
+            ecs.query((e2, os2) -> {
+                rp.contents = (Transform) os2[0];
+            }, Transform.class, Player.class);
+            Transform pt = rp.contents;
+            if(pt == null) return;
+            Vec2 diff = pt.position.minus(t.position);
+            Vec2 min = mtp.dirs[0];
+            double dist = 10000;
+            for(int i = 0; i < mtp.dirs.length; i++){
+                Vec2 dir = mtp.dirs[i];
+                double thisDist = dir.dot(diff);
+                if(thisDist < dist){
+                    dist = thisDist;
+                    min = dir;
+                }
+            }
+            ecs.addComponent(e, new MoveTo(t.position.plus(min.times(dist)), mtp.speed, mtp));
+            ecs.removeComponent(e, mtp);
+        }, Transform.class, MoveToPlayer.class);
         //Enemy shoot
         ecs.query((e, os) -> {
             Transform t = (Transform) os[0];
