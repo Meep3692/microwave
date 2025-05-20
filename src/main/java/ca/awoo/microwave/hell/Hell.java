@@ -28,6 +28,7 @@ import static java.lang.Math.sin;
 import static java.lang.Math.PI;
 import static java.lang.Math.atan2;
 import static java.lang.Math.min;
+import static java.lang.Math.signum;
 
 public class Hell extends State<Integer>{
     private final Game game;
@@ -90,14 +91,26 @@ public class Hell extends State<Integer>{
             new BoardClear(() -> {
                 split(8, 100, this::enterPawn);
             }),
-            new Delay(4.0, () -> {
-                split(8, 100, this::enterPawn);
-            }),
             new BoardClear(() -> {
                 split(2, 100, this::enterRook);
             }),
             new BoardClear(() -> {
                 split(2, 100, this::enterBishop);
+            }),
+            new BoardClear(() -> {
+                split(2, 100, this::enterKnight);
+            }),
+            new BoardClear(()->{}),
+            new Delay(5.0, () -> {
+                split(8, 100, this::enterPawn);
+            }),
+            new Delay(2.0, () -> {
+                enterRook(new Vec2(split(8, 1), 100));
+                enterRook(new Vec2(split(8, 8), 100));
+                enterKnight(new Vec2(split(8, 2), 100));
+                enterKnight(new Vec2(split(8, 7), 100));
+                enterBishop(new Vec2(split(8, 3), 100));
+                enterBishop(new Vec2(split(8, 6), 100));
             })
         );
     }
@@ -136,6 +149,45 @@ public class Hell extends State<Integer>{
         for(int i = 0; i < c; i++){
             particle(pos, image);
         }
+    }
+
+    private long enterKnight(Vec2 dest) {
+        double rootx = dest.x;
+        Vec2 source = new Vec2(rootx, -100);
+        long knight = ecs.createEntity();
+        ecs.addComponent(knight, new Transform(source, PI/2));
+        ecs.addComponent(knight, new PieceSprite(game, Type.KNIGHT, Team.WHITE, Variant.MARBLE));
+        ecs.addComponent(knight, new Shoot(0.2, (e, t, ecs) -> {
+            ecs.addComponent(e, t.copy());
+            ecs.addComponent(e, new Bullet(Bullet.Team.ENEMY));
+            ecs.addComponent(e, new StraightMovement(300));
+            ecs.addComponent(e, new Sprite(game.getImageMasked("/com/screamingbrainstudio/breakout/Balls/Shiny/Ball_Orange_Shiny-16x16.png", Color.MAGENTA), 2));
+        }));
+        ecs.addComponent(knight, new Enemy(30));
+        MoveTo root = new MoveTo(new Vec2(rootx, 100), 150);
+        double y = 100;
+        double side = signum(rootx - scaledWidth()/2);
+        MoveTo last = root;
+        while(y < scaledHeight()+100){
+            MoveTo next = new MoveTo(new Vec2(rootx+200*side, y), 150);
+            last.then = next;
+            last = next;
+            next = new MoveTo(new Vec2(rootx+200*side, y+100), 150);
+            last.then = next;
+            last = next;
+            next = new MoveTo(new Vec2(rootx, y+100), 150);
+            last.then = next;
+            last = next;
+            next = new MoveTo(new Vec2(rootx, y+200), 150);
+            last.then = next;
+            last = next;
+            y += 200;
+        }
+        MoveTo reset = new MoveTo(new Vec2(rootx, -100), Double.POSITIVE_INFINITY);
+        last.then = reset;
+        reset.then = root;
+        ecs.addComponent(knight, root);
+        return knight;
     }
 
     private long enterRook(Vec2 dest){
@@ -261,7 +313,7 @@ public class Hell extends State<Integer>{
                 ecs.addComponent(e, new Sprite(game.getImageMasked("/com/screamingbrainstudio/breakout/Balls/Shiny/Ball_Orange_Shiny-16x16.png", Color.MAGENTA), 2));
             }
         }));
-        ecs.addComponent(bishop, new Enemy(50));
+        ecs.addComponent(bishop, new Enemy(30));
         return bishop;
     }
 
@@ -395,7 +447,7 @@ public class Hell extends State<Integer>{
                     Transform bt = (Transform) bos[0];
                     Bullet b = (Bullet)bos[1];
                     if(b.team == Bullet.Team.ENEMY && et.position.distance(bt.position) < 16){
-                        game.playSound("/io/itch/brackeys/sound/hurt.wav");
+                        game.playSound("/io/itch/brackeys/sound/explosion.wav");
                         ecs.removeEntity(bullet);
                         particles(et.position, game.getImage("/ca/awoo/microwave/hell/card_small_blue.png"), 10);
                         p.iframes = 2.0;
@@ -446,7 +498,9 @@ public class Hell extends State<Integer>{
                 }
             }else{
                 Vec2 dir = delta.normalized();
+                double rot = atan2(dir.y, dir.x);
                 t.position = t.position.plus(dir.times(min(dt*m.speed, dist)));
+                t.rotation = rot;
             }
         }, Transform.class, MoveTo.class);
 
