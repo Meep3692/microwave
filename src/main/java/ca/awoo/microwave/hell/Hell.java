@@ -100,7 +100,10 @@ public class Hell extends State<Integer>{
             new BoardClear(() -> {
                 split(2, 100, this::enterKnight);
             }),
-            new BoardClear(()->{}),
+            new BoardClear(()->{
+                split(1, 100, this::enterQueen);
+            }),
+            new BoardClear(() -> {}),
             new Delay(5.0, () -> {
                 split(8, 100, this::enterPawn);
             }),
@@ -315,6 +318,79 @@ public class Hell extends State<Integer>{
         }));
         ecs.addComponent(bishop, new Enemy(30));
         return bishop;
+    }
+
+    private long enterQueen(Vec2 dest){
+        long queen = makeQueen(dest);
+        ecs.addComponent(queen, new MoveToPlayer(150, new Vec2(1, 1).normalized(), new Vec2(-1, 1).normalized(), new Vec2(1, -1).normalized(), new Vec2(-1, -1).normalized(), new Vec2(0, 1), new Vec2(1, 0), new Vec2(0, -1), new Vec2(-1, 0)));
+        return queen;
+    }
+
+    private long makeQueen(Vec2 dest){
+        Vec2 source = new Vec2(dest.x, -100);
+        long queen = ecs.createEntity();
+        ecs.addComponent(queen, new Transform(source, PI/2));
+        ecs.addComponent(queen, new PieceSprite(game, Type.QUEEN, Team.WHITE, Variant.MARBLE));
+        ecs.addComponent(queen, new Shoot(0.8, new BulletGenerator() {
+            @Override
+            public void gen(long e, Transform t, ECS ecs) {
+                Transform tb = t.copy();
+                tb.rotation = PI/2*0+PI/4;
+                ecs.addComponent(e, tb);
+                ecs.addComponent(e, new Bullet(Bullet.Team.ENEMY));
+                ecs.addComponent(e, new StraightMovement(300));
+                ecs.addComponent(e, new Sprite(game.getImageMasked("/com/screamingbrainstudio/breakout/Balls/Shiny/Ball_Orange_Shiny-16x16.png", Color.MAGENTA), 2));
+                e = ecs.createEntity();
+                tb = t.copy();
+                tb.rotation = PI/2*1+PI/4;
+                ecs.addComponent(e, tb);
+                ecs.addComponent(e, new Bullet(Bullet.Team.ENEMY));
+                ecs.addComponent(e, new StraightMovement(300));
+                ecs.addComponent(e, new Sprite(game.getImageMasked("/com/screamingbrainstudio/breakout/Balls/Shiny/Ball_Orange_Shiny-16x16.png", Color.MAGENTA), 2));
+                e = ecs.createEntity();
+                tb = t.copy();
+                tb.rotation = PI/2*2+PI/4;
+                ecs.addComponent(e, tb);
+                ecs.addComponent(e, new Bullet(Bullet.Team.ENEMY));
+                ecs.addComponent(e, new StraightMovement(300));
+                ecs.addComponent(e, new Sprite(game.getImageMasked("/com/screamingbrainstudio/breakout/Balls/Shiny/Ball_Orange_Shiny-16x16.png", Color.MAGENTA), 2));
+                e = ecs.createEntity();
+                tb = t.copy();
+                tb.rotation = PI/2*3+PI/4;
+                ecs.addComponent(e, tb);
+                ecs.addComponent(e, new Bullet(Bullet.Team.ENEMY));
+                ecs.addComponent(e, new StraightMovement(300));
+                ecs.addComponent(e, new Sprite(game.getImageMasked("/com/screamingbrainstudio/breakout/Balls/Shiny/Ball_Orange_Shiny-16x16.png", Color.MAGENTA), 2));
+                tb = t.copy();
+                ecs.addComponent(e, tb);
+                ecs.addComponent(e, new Bullet(Bullet.Team.ENEMY));
+                ecs.addComponent(e, new StraightMovement(300));
+                ecs.addComponent(e, new Sprite(game.getImageMasked("/com/screamingbrainstudio/breakout/Balls/Shiny/Ball_Orange_Shiny-16x16.png", Color.MAGENTA), 2));
+                e = ecs.createEntity();
+                tb = t.copy();
+                tb.rotation = PI;
+                ecs.addComponent(e, tb);
+                ecs.addComponent(e, new Bullet(Bullet.Team.ENEMY));
+                ecs.addComponent(e, new StraightMovement(300));
+                ecs.addComponent(e, new Sprite(game.getImageMasked("/com/screamingbrainstudio/breakout/Balls/Shiny/Ball_Orange_Shiny-16x16.png", Color.MAGENTA), 2));
+                e = ecs.createEntity();
+                tb = t.copy();
+                tb.rotation = PI/2*3;
+                ecs.addComponent(e, tb);
+                ecs.addComponent(e, new Bullet(Bullet.Team.ENEMY));
+                ecs.addComponent(e, new StraightMovement(300));
+                ecs.addComponent(e, new Sprite(game.getImageMasked("/com/screamingbrainstudio/breakout/Balls/Shiny/Ball_Orange_Shiny-16x16.png", Color.MAGENTA), 2));
+                e = ecs.createEntity();
+                tb = t.copy();
+                tb.rotation = 0;
+                ecs.addComponent(e, tb);
+                ecs.addComponent(e, new Bullet(Bullet.Team.ENEMY));
+                ecs.addComponent(e, new StraightMovement(300));
+                ecs.addComponent(e, new Sprite(game.getImageMasked("/com/screamingbrainstudio/breakout/Balls/Shiny/Ball_Orange_Shiny-16x16.png", Color.MAGENTA), 2));
+            }
+        }));
+        ecs.addComponent(queen, new Enemy(90));
+        return queen;
     }
 
     private void sequence(Scheduler... items){
