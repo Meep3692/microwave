@@ -296,7 +296,13 @@ public class Hell extends State<Integer>{
                     ecs.removeEntity(enemy);
                     ecs.removeEntity(bullet);
                     particles(et.position, game.getImage("/ca/awoo/microwave/hell/card_small_red.png"), 10);
+                    int thousand = score/1000;
                     score += en.points;
+                    int newThousand = score/1000;
+                    if(newThousand != thousand){
+                        lives++;
+                        game.playSound("/io/itch/brackeys/sound/power_up.wav");
+                    }
                     b.dead = true;
                 }
             }, Transform.class, Bullet.class);
@@ -421,30 +427,28 @@ public class Hell extends State<Integer>{
         }
 
         //Director
-        if(!enemiesLeft.contents){
-            ecs.query((e, os) -> {
-                Director director = (Director)os[0];
-                if(director.fullSpawnTime < 0){
-                    double sofar = 0;
-                    int waves = 0;
-                    while(sofar < director.target){
-                        int i = random.nextInt(director.waves.length);
-                        Wave wave = director.waves[i];
-                        sofar += wave.points();
-                        long de = ecs.createEntity();
-                        ecs.addComponent(de, new Delay(waves, () -> {
-                            wave.spawn(ecs, scaledWidth(), scaledHeight());
-                        }));
-                        waves++;
-                    }
-                    director.target *= director.mult;
-                    director.fullSpawnTime = waves;
-                }else{
-                    director.fullSpawnTime -= dt;
+        ecs.query((e, os) -> {
+            Director director = (Director)os[0];
+            if(director.fullSpawnTime < 0 && !enemiesLeft.contents){
+                double sofar = 0;
+                int waves = 0;
+                while(sofar < director.target){
+                    int i = random.nextInt(director.waves.length);
+                    Wave wave = director.waves[i];
+                    sofar += wave.points();
+                    long de = ecs.createEntity();
+                    ecs.addComponent(de, new Delay(waves, () -> {
+                        wave.spawn(ecs, scaledWidth(), scaledHeight());
+                    }));
+                    waves++;
                 }
-                
-            }, Director.class);
-        }
+                director.target *= director.mult;
+                director.fullSpawnTime = waves;
+            }else{
+                director.fullSpawnTime -= dt;
+            }
+            
+        }, Director.class);
 
         bgy += 100*dt;
 
@@ -584,6 +588,7 @@ public class Hell extends State<Integer>{
         int uisx = getWidth()-uiWidth;
         int uisy = 0;
         textureArea(g, uisx, uisy, getWidth(), getHeight(), game.getImage("/com/screamingbrainstudio/basematerials/Stone/Mat_Stone_Black_02-128x128.png"));
+        Font oldFont = g.getFont();
         Font uiFont = new Font("monospace", Font.BOLD, 32);
         g.setFont(uiFont);
         g.setColor(Color.WHITE);
@@ -607,6 +612,7 @@ public class Hell extends State<Integer>{
             int x = (int) (lx + split);
             life.draw(g, Direction.EAST, (int)(x - 64*renderScale), ly, renderScale);
         }
+        g.setFont(oldFont);
 
         //Debug
         if(game.isDebugView()){
@@ -616,7 +622,7 @@ public class Hell extends State<Integer>{
                 int y = (int)(t.position.y*renderScale);
                 int dirx = (int) (x + cos(t.rotation)*16);
                 int diry = (int) (y + sin(t.rotation)*16);
-                g.setColor(Color.BLACK);
+                g.setColor(Color.WHITE);
                 g.drawString("Entity: " + e, x, y);
                 g.setColor(Color.RED);
                 g.drawLine(x, y, dirx, diry);
