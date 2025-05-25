@@ -424,14 +424,25 @@ public class Hell extends State<Integer>{
         if(!enemiesLeft.contents){
             ecs.query((e, os) -> {
                 Director director = (Director)os[0];
-                double sofar = 0;
-                while(sofar < director.target){
-                    int i = random.nextInt(director.waves.length);
-                    Wave wave = director.waves[i];
-                    sofar += wave.points();
-                    wave.spawn(ecs, scaledWidth(), scaledHeight());
+                if(director.fullSpawnTime < 0){
+                    double sofar = 0;
+                    int waves = 0;
+                    while(sofar < director.target){
+                        int i = random.nextInt(director.waves.length);
+                        Wave wave = director.waves[i];
+                        sofar += wave.points();
+                        long de = ecs.createEntity();
+                        ecs.addComponent(de, new Delay(waves, () -> {
+                            wave.spawn(ecs, scaledWidth(), scaledHeight());
+                        }));
+                        waves++;
+                    }
+                    director.target *= director.mult;
+                    director.fullSpawnTime = waves;
+                }else{
+                    director.fullSpawnTime -= dt;
                 }
-                director.target *= director.mult;
+                
             }, Director.class);
         }
 
@@ -686,6 +697,14 @@ public class Hell extends State<Integer>{
                 @Override
                 public void actionPerformed(ActionEvent ev) {
                     lives = -1;
+                }
+            },
+            new AbstractAction("Clear") {
+                @Override
+                public void actionPerformed(ActionEvent ev) {
+                    ecs.query((e, os) -> {
+                        ecs.removeEntity(e);
+                    }, Enemy.class);
                 }
             }
         };
