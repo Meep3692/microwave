@@ -662,6 +662,8 @@ public class Hell extends State<Integer>{
                 g.setColor(Color.BLUE);
                 g.drawLine(x, y, diffx, diffy);
             }, Transform.class, Homing.class);
+            g.setColor(Color.WHITE);
+            g.drawString("Query answers: " + ecs.getQueryAnswers(), 0, oldFont.getSize());
         }
     }
 

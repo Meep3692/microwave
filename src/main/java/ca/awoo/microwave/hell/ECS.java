@@ -123,6 +123,7 @@ public class ECS {
         removeListeners.clear();
         eventqueue.clear();
     }
+    private long queryAnswers = 0;
 
     private int queryLayers = 0;
 
@@ -220,12 +221,19 @@ public class ECS {
                 }
                 if(runSystem){
                     system.run(lowest, components);
+                    queryAnswers++;
                     lowest++;
                 }
             }
         }finally{
             queryLayers--;
         }
+    }
+
+    public long getQueryAnswers(){
+        long answers = queryAnswers;
+        queryAnswers = 0;
+        return answers;
     }
 
     public <T> void addComponent(long entity, T component){
