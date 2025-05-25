@@ -59,13 +59,17 @@ public class Hell extends State<Integer>{
         }
 
         life = new PieceSprite(game, Type.KNIGHT, Team.BLACK, Variant.MARBLE);
+        reset();
+    }
+
+    private void reset(){
+        lives = 5;
+        score = 0;
+        ecs.clear();
         //Create player
         long player = ecs.createEntity();
         Transform pt = new Transform(new Vec2(640-uiWidth/2, 480), -PI/2);
         ecs.addComponent(player, pt);
-        ecs.addComponent(player, new Delay(0.5, () -> {
-            pt.position = new Vec2(scaledWidth()/2, scaledHeight()/2);
-        }));
         ecs.addComponent(player, new PieceSprite(game, Type.KNIGHT, Team.BLACK, Variant.MARBLE));
         ecs.addComponent(player, new Player());
         ecs.addComponent(player, new Shoot(0.2, (e, t, ecs) -> {
@@ -74,7 +78,6 @@ public class Hell extends State<Integer>{
             ecs.addComponent(e, new StraightMovement(300));
             ecs.addComponent(e, new Sprite(game.getImageMasked("/com/screamingbrainstudio/breakout/Balls/Glass/Ball_Chrome_Glass-16x16.png", Color.MAGENTA), 2));
         }));
-
 
         game.playSequence(game.getSequence("/io/itch/chisech/naranoiston/B01 - Viagem ao Setor Magenta.mid"));
         Wave[] waves = new Wave[]{
@@ -256,6 +259,7 @@ public class Hell extends State<Integer>{
                 p.iframes -= dt;
             }else{
                 ecs.query((bullet, bos) -> {
+                    if(p.iframes > 0) return;
                     Transform bt = (Transform) bos[0];
                     Bullet b = (Bullet)bos[1];
                     if(b.team == Bullet.Team.ENEMY && et.position.distance(bt.position) < 16){
@@ -287,12 +291,13 @@ public class Hell extends State<Integer>{
             ecs.query((bullet, bos) -> {
                 Transform bt = (Transform) bos[0];
                 Bullet b = (Bullet)bos[1];
-                if(b.team == Bullet.Team.PLAYER && et.position.distance(bt.position) < 32){
+                if(b.team == Bullet.Team.PLAYER && et.position.distance(bt.position) < 32 && !b.dead){
                     game.playSound("/io/itch/brackeys/sound/hurt.wav");
                     ecs.removeEntity(enemy);
                     ecs.removeEntity(bullet);
                     particles(et.position, game.getImage("/ca/awoo/microwave/hell/card_small_red.png"), 10);
                     score += en.points;
+                    b.dead = true;
                 }
             }, Transform.class, Bullet.class);
         }, Transform.class, Enemy.class);
@@ -431,6 +436,14 @@ public class Hell extends State<Integer>{
         }
 
         bgy += 100*dt;
+
+        if(lives < 0){
+            GameOverState.Result result = game.runState(new GameOverState(game));
+            if(result == GameOverState.Result.EXIT){
+                return Optional.of(0);
+            }
+            reset();
+        }
 
         if(game.getInput().isPressed(Input.EXIT)){
             return Optional.of(0);
@@ -667,6 +680,12 @@ public class Hell extends State<Integer>{
                 @Override
                 public void actionPerformed(ActionEvent ev) {
                     new Queens(game, 1).spawn(ecs, scaledWidth(), scaledHeight());
+                }
+            },
+            new AbstractAction("Die") {
+                @Override
+                public void actionPerformed(ActionEvent ev) {
+                    lives = -1;
                 }
             }
         };

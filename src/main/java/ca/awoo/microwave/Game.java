@@ -383,6 +383,9 @@ public class Game extends JComponent{
             add(lastState);
         }
         clearPressed();
+        for(Consumer<Game> listener : stateChangeListeners){
+            listener.accept(this);
+        }
         return result.get();
     }
 

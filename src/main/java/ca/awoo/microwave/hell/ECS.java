@@ -115,6 +115,15 @@ public class ECS {
         eventqueue = new ArrayList<>();
     }
 
+    public void clear(){
+        components.clear();
+        shadow.clear();
+        shadowRemove.clear();
+        shadowKill.clear();
+        removeListeners.clear();
+        eventqueue.clear();
+    }
+
     private int queryLayers = 0;
 
     public synchronized void query(ECSSystem system, Class<?>... comps){

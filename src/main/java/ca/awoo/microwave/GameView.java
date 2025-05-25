@@ -11,6 +11,7 @@ import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
 import javax.swing.border.BevelBorder;
 
 public class GameView extends JPanel{
@@ -54,21 +55,28 @@ public class GameView extends JPanel{
 
         Ref<JMenu> stateMenu = new Ref<JMenu>(null);
         game.onStateChange((g) -> {
-            if(stateMenu.contents != null){
-                menuBar.remove(stateMenu.contents);
-            }
-            State<?> state = g.getActiveState();
-            Action[] actions = state.getActions();
-            if(actions == null || actions.length == 0){
-                stateMenu.contents = null;
-                return;
-            }
-            stateMenu.contents = new JMenu(state.getClass().getSimpleName());
-            for(Action action : actions){
-                JMenuItem menuItem = new JMenuItem(action);
-                stateMenu.contents.add(menuItem);
-            }
-            menuBar.add(stateMenu.contents);
+            SwingUtilities.invokeLater(() -> {
+                if(stateMenu.contents != null){
+                    menuBar.remove(stateMenu.contents);
+                    validate();
+                    repaint();
+                }
+                
+                State<?> state = g.getActiveState();
+                Action[] actions = state.getActions();
+                if(actions == null || actions.length == 0){
+                    stateMenu.contents = null;
+                    return;
+                }
+                stateMenu.contents = new JMenu(state.getClass().getSimpleName());
+                for(Action action : actions){
+                    JMenuItem menuItem = new JMenuItem(action);
+                    stateMenu.contents.add(menuItem);
+                }
+                menuBar.add(stateMenu.contents);
+                validate();
+                repaint();
+            });
         });
 
         add(menuBar, BorderLayout.NORTH);

@@ -6,6 +6,7 @@ public class Bullet {
         ENEMY
     }
     public final Team team;
+    public boolean dead = false;
     public Bullet(Team team) {
         this.team = team;
     }
