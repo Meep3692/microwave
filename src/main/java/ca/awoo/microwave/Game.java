@@ -236,10 +236,12 @@ public class Game extends JComponent{
             
             try {
                 sequencer.stop();
+                sequencer.close();
+                sequencer.open();
                 sequencer.setSequence(sequence);
                 if(!muteMusic)
                     sequencer.start();
-            } catch (InvalidMidiDataException e) {
+            } catch (InvalidMidiDataException | MidiUnavailableException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
             }
@@ -301,6 +303,7 @@ public class Game extends JComponent{
     }
 
     public State<?> getActiveState(){
+        if(states.isEmpty()) return null;
         return states.peek();
     }
 

@@ -63,6 +63,10 @@ public class GameView extends JPanel{
                 }
                 
                 State<?> state = g.getActiveState();
+                if(state == null){
+                    stateMenu.contents = null;
+                    return;
+                }
                 Action[] actions = state.getActions();
                 if(actions == null || actions.length == 0){
                     stateMenu.contents = null;
