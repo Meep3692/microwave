@@ -239,6 +239,7 @@ public class Game extends JComponent{
                 sequencer.close();
                 sequencer.open();
                 sequencer.setSequence(sequence);
+                sequencer.setLoopCount(Sequencer.LOOP_CONTINUOUSLY);
                 if(!muteMusic)
                     sequencer.start();
             } catch (InvalidMidiDataException | MidiUnavailableException e) {
