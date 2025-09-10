@@ -3,14 +3,9 @@ package ca.awoo.microwave.hell;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
-import java.util.Map.Entry;
 
 public class ECS {
     private static class Component implements Comparable<Component>{
@@ -97,7 +92,7 @@ public class ECS {
             return "ShadowComp [type=" + type + ", component=" + component + "]";
         }
     }
-    private final Map<Class<?>, SortedSet<Component>> components;
+    private final Map<Class<?>, Map<Long, Object>> components;
     private final Set<ShadowComp> shadow;
     private final Set<ShadowComp> shadowRemove;
     private final Set<Long> shadowKill;
@@ -131,11 +126,8 @@ public class ECS {
         if(queryLayers == 0){
             synchronized(shadowKill){
                 for(long entity : shadowKill){
-                    for(Entry<Class<?>, SortedSet<Component>> entry : components.entrySet()){
-                        // entry.getValue().removeIf((c) -> {
-                        //     return c.entity == entity;
-                        // });
-                        entry.getValue().stream().filter((c) -> {return c.entity == entity;}).forEach((c) -> {removeComponent(entity, c.component);});
+                    for(Map<Long, Object> map : components.values()){
+                        map.remove(entity);
                     }
                 }
                 shadowKill.clear();
@@ -145,8 +137,8 @@ public class ECS {
                     if(!components.containsKey(s.type)){
                         continue;
                     }
-                    SortedSet<Component> set = components.get(s.type);
-                    set.remove(s.component);
+                    Map<Long, Object> set = components.get(s.type);
+                    set.remove(s.component.entity);
                     List<Runnable> listeners = removeListeners.get(s.component.component);
                     if(listeners != null){
                         for(Runnable listener : listeners){
@@ -160,10 +152,10 @@ public class ECS {
             synchronized(shadow){
                 for(ShadowComp s : shadow){
                     if(!components.containsKey(s.type)){
-                        components.put(s.type, new TreeSet<>());
+                        components.put(s.type, new HashMap<>());
                     }
-                    SortedSet<Component> set = components.get(s.type);
-                    set.add(s.component);
+                    Map<Long, Object> map = components.get(s.type);
+                    map.put(s.component.entity, s.component.component);
                 }
                 shadow.clear();
             }
@@ -175,55 +167,38 @@ public class ECS {
         queryLayers++;
         try{
             @SuppressWarnings("unchecked")
-            Iterator<Component>[] iterators = new Iterator[comps.length];
+            Map<Long, Object>[] maps = new Map[comps.length];
             for(int i = 0; i < comps.length; i++){
-                SortedSet<Component> list = components.get(comps[i]);
-                if(list == null){
+                Map<Long, Object> map = components.get(comps[i]);
+                if(map == null){
                     return;
                 }
-                iterators[i] = list.iterator();
+                maps[i] = map;
             }
-            
-            Component[] current = new Component[iterators.length];
-            Object[] components = new Object[iterators.length];
-            long lowest = 0;
-            for(int i = 0; i < iterators.length; i++){
-                try{
-                    current[i] = iterators[i].next();
-                    if(current[i].entity > lowest){
-                        lowest = current[i].entity;
-                    }
-                }catch(NoSuchElementException e){
-                    return;
+
+            Map<Long, Object> smallest = maps[0];
+
+            for(int i = 1; i < maps.length; i++){
+                if(maps[i].size() < smallest.size()){
+                    smallest = maps[i];
                 }
             }
-            
-            while(true){
-                boolean runSystem = true;
-                for(int i = 0; i < iterators.length; i++){
-                    while(current[i].entity < lowest){
-                        try{
-                            current[i] = iterators[i].next();
-                        }catch(NoSuchElementException e){
-                            return;
-                        }
-                        if(current[i] == null){
-                            return;
-                        }
-                    }
-                    if(current[i].entity > lowest){
-                        lowest = current[i].entity;
-                        //This used to be a break with label but those just don't work as far as I can tell
-                        runSystem = false;
+
+            Object[] components = new Object[comps.length];
+
+            for(long entity : smallest.keySet()){
+                int i;
+                for(i = 0; i < comps.length; i++){
+                    components[i] = maps[i].get(entity);
+                    if(components[i] == null){
                         break;
                     }
-                    components[i] = current[i].component;
                 }
-                if(runSystem){
-                    system.run(lowest, components);
-                    queryAnswers++;
-                    lowest++;
+                if(i < comps.length){
+                    continue;
                 }
+                queryAnswers++;
+                system.run(entity, components);
             }
         }finally{
             queryLayers--;
